@@ -5,10 +5,8 @@
 ## Makefile
 ##
 
-SRC_COMMON  =   src/main.cpp
 SRC_SERVER  =   $(wildcard src/server/*.cpp)
 SRC_CLI     =   $(wildcard src/cli/*.cpp)
-
 
 SRC_TESTS   =   $(wildcard tests/*.cpp)
 
@@ -22,20 +20,24 @@ TEST_NAME   =   unit_tests
 CXXFLAGS    =   -Wall -Wextra -Iinclude -g
 CPPFLAGS    =   -Iinclude
 
+LIB_MYTEAMS_DIR = libs/myteams
+LDFLAGS    +=   -L$(LIB_MYTEAMS_DIR) -Wl,-rpath,$(abspath $(LIB_MYTEAMS_DIR))
+LDLIBS     +=   -lmyteams
+
 CXX         =   g++
 RM          =   rm -f
 
 all:    $(NAME_SERVER) $(NAME_CLI)
 
 $(NAME_SERVER):    $(OBJ_SERVER)
-	$(CXX) -o $(NAME_SERVER) $(OBJ_SERVER)
+	$(CXX) -o $(NAME_SERVER) $(OBJ_SERVER) $(LDFLAGS) $(LDLIBS)
 
 $(NAME_CLI):    $(OBJ_CLI)
-	$(CXX) -o $(NAME_CLI) $(OBJ_CLI)
+	$(CXX) -o $(NAME_CLI) $(OBJ_CLI) $(LDFLAGS) $(LDLIBS)
 
 clean:
 	$(RM) $(OBJ_SERVER) $(OBJ_CLI)
-	$(RM) *.gcno *.gcda # Nettoyage des fichiers de coverage
+	$(RM) *.gcno *.gcda
 
 fclean: clean
 	$(RM) $(NAME_SERVER) $(NAME_CLI)
@@ -45,7 +47,8 @@ re: fclean all
 
 tests_run:
 	@$(RM) *.gcda *.gcno 
-	$(CXX) -o $(TEST_NAME) $(SRC_COMMON) $(SRC_TESTS) $(SRC_SERVER) $(SRC_CLI) $(CXXFLAGS) -DUNIT_TEST --coverage -lcriterion
+	$(CXX) -o $(TEST_NAME) $(SRC_COMMON) $(SRC_TESTS) $(SRC_SERVER) $(SRC_CLI) \
+		$(CXXFLAGS) -DUNIT_TEST --coverage -lcriterion $(LDFLAGS) $(LDLIBS)
 	./$(TEST_NAME)
 	gcovr --exclude tests/
 	gcovr --exclude tests/ --branches
