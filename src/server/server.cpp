@@ -1,68 +1,206 @@
 /*
 ** EPITECH PROJECT, 2026
-** MY-TEAMS-1
+** my_teams
 ** File description:
 ** server
 */
 
-extern "C" {
-    #include "../../libs/myteams/logging_server.h"
+#include <csignal>
+#include <cstdlib>
+#include <cerrno>
+#include <cstring>
+#include <iostream>
+#include <array>
+#include <vector>
+#include <poll.h>
+
+#include <arpa/inet.h>
+#include <netinet/in.h>
+#include <sys/socket.h>
+#include <unistd.h>
+
+#include "server.hpp"
+
+Server::Server(int port) : _port(port), _server_socket(-1)
+{
 }
 
-namespace Server {
-    class Logger final {
-        public:
-            ~Logger() = default;
-
-            int EventTeamCreated(
-                char const *team_uuid,
-                char const *team_name,
-                char const *user_uuid) const
-            { return server_event_team_created(team_uuid, team_name, user_uuid); }
-
-            int EventChannelCreated(
-                char const *team_uuid,
-                char const *channel_uuid,
-                char const *channel_name) const
-            { return server_event_channel_created(team_uuid, channel_uuid, channel_name); }
-
-            int EventThreadCreated(
-                char const *channel_uuid,
-                char const *thread_uuid,
-                char const *user_uuid,
-                char const *thread_title,
-                char const *thread_body) const
-            { return server_event_thread_created(channel_uuid, thread_uuid, user_uuid, thread_title, thread_body); }
-
-            int EventReplyCreated(
-                char const *thread_uuid,
-                char const *user_uuid,
-                char const *reply_body) const
-            { return server_event_reply_created(thread_uuid, user_uuid, reply_body); }
-
-            int EventUserSubscribed(char const *team_uuid, char const *user_uuid) const
-            { return server_event_user_subscribed(team_uuid, user_uuid); }
-
-            int EventUserUnsubscribed(char const *team_uuid, char const *user_uuid) const
-            { return server_event_user_unsubscribed(team_uuid, user_uuid); }
-
-            int EventUserCreated(char const *user_uuid, char const *user_name) const
-            { return server_event_user_created(user_uuid, user_name); }
-
-            int EventUserLoaded(char const *user_uuid, char const *user_name) const
-            { return server_event_user_loaded(user_uuid, user_name); }
-
-            int EventUserLoggedIn(char const *user_uuid) const
-            { return server_event_user_logged_in(user_uuid); }
-
-            int EventUserLoggedOut(char const *user_uuid) const
-            { return server_event_user_logged_out(user_uuid); }
-
-            int EventPrivateMessageSended(
-                char const *sender_uuid,
-                char const *receiver_uuid,
-                char const *message_body) const
-            { return server_event_private_message_sended(sender_uuid, receiver_uuid, message_body); }
-    };
+Server::~Server()
+{
+    cleanup();
 }
+
+void Server::send(int client_socket, const std::string &message)
+{
+    ::send(client_socket, message.c_str(), message.length(), MSG_NOSIGNAL);
+}
+
+bool Server::init_socket()
+{
+    _server_socket = socket(AF_INET, SOCK_STREAM, 0);
+    if (_server_socket == -1)
+        return false;
+
+    int enable = 1;
+    if (setsockopt(_server_socket, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(enable)) == -1) {
+        close(_server_socket);
+        return false;
+    }
+    return true;
+}
+
+bool Server::bind_socket()
+{
+    sockaddr_in server_addr{};
+    server_addr.sin_family = AF_INET;
+    server_addr.sin_addr.s_addr = htonl(INADDR_ANY);
+    server_addr.sin_port = htons(static_cast<uint16_t>(_port));
+
+    if (bind(_server_socket, reinterpret_cast<sockaddr *>(&server_addr),
+            sizeof(server_addr)) == -1)
+        return false;
+    return true;
+}
+
+bool Server::listen_socket()
+{
+    if (listen(_server_socket, 32) == -1)
+        return false;
+    return true;
+}
+
+int Server::accept_client()
+{
+    sockaddr_in client_addr{};
+    socklen_t client_len = sizeof(client_addr);
+    
+    int client_socket = accept(_server_socket, 
+        reinterpret_cast<sockaddr *>(&client_addr),
+        &client_len);
+    return client_socket;
+}
+
+std::string Server::read_command(int client_socket)
+{
+    std::array<char, 256> buffer{};
+    ssize_t bytes_read = read(client_socket, buffer.data(), buffer.size() - 1);
+    
+    if (bytes_read > 0) {
+        buffer[bytes_read] = '\0';
+        std::string command(buffer.data());
+        size_t end = command.find_last_not_of(" \n\r\t");
+        if (end != std::string::npos)
+            command = command.substr(0, end + 1);
+        else
+            return "";
+        return command;
+    }
+    return "";
+}
+
+void Server::handle_command(int client_socket, const std::string &command)
+{
+    if (command == "exit") {
+        send(client_socket, "Goodbye!\n");
+        handle_client_disconnect(client_socket);
+    } else if (command == "help") {
+        send(client_socket, "Commands: exit, help\n");
+    } else {
+        send(client_socket, "Unknown command\n");
+    }
+}
+
+int Server::setup_poll_fds(std::vector<struct pollfd> &fds)
+{
+    int index = 1;
+    
+    std::fill(fds.begin(), fds.end(), pollfd{});
+    fds[0].fd = _server_socket;
+    fds[0].events = POLLIN;
+    
+    for (size_t i = 0; i < _clients.size(); i++) {
+        if (_clients[i] != -1) {
+            fds[index].fd = _clients[i];
+            fds[index].events = POLLIN;
+            index++;
+        }
+    }
+    return index;
+}
+
+void Server::handle_client_disconnect(int client_fd)
+{
+    close(client_fd);
+    for (size_t i = 0; i < _clients.size(); i++) {
+        if (_clients[i] == client_fd) {
+            _clients[i] = -1;
+            break;
+        }
+    }
+}
+
+void Server::handle_clients_input(const std::vector<struct pollfd> &fds)
+{
+    int pollfd_idx = 1;
+    for (size_t i = 0; i < _clients.size(); i++) {
+        if (_clients[i] != -1) {
+            if (fds[pollfd_idx].revents & POLLIN) {
+                std::string cmd = read_command(_clients[i]);
+                if (cmd.empty()) {
+                    handle_client_disconnect(_clients[i]);
+                } else {
+                    handle_command(_clients[i], cmd);
+                }
+            }
+            pollfd_idx++;
+        }
+    }
+}
+
+void Server::cleanup()
+{
+    for (size_t i = 0; i < _clients.size(); i++) {
+        if (_clients[i] != -1)
+            close(_clients[i]);
+    }
+    if (_server_socket != -1)
+        close(_server_socket);
+}
+
+void Server::start()
+{
+    if (!init_socket() || !bind_socket() || !listen_socket()) {
+        cleanup();
+        return;
+    }
+
+    std::cout << "Server listening on port " << _port << std::endl;
+
+    std::vector<struct pollfd> fds(500);
+    int index;
+
+    while (true) {
+        index = setup_poll_fds(fds);
+        if (poll(fds.data(), index, -1) < 0)
+            break;
+
+        if (fds[0].revents & POLLIN) {
+            int client_socket = accept_client();
+            if (client_socket != -1) {
+                _clients.push_back(client_socket);
+                std::cout << "New client connected" << std::endl;
+            }
+        }
+        handle_clients_input(fds);
+
+        for (int i = _clients.size() - 1; i >= 0; i--) {
+            if (_clients[i] == -1)
+                _clients.erase(_clients.begin() + i);
+        }
+    }
+
+    cleanup();
+}
+
+
 
