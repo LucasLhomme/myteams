@@ -5,6 +5,7 @@
 ** client
 */
 #include "./cli/client.hpp"
+#include "./cli/commands.hpp"
 
 namespace IClient {
 
