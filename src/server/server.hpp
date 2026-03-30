@@ -10,6 +10,7 @@
 
 #include <string>
 #include <vector>
+#include <array>
 #include <poll.h>
 
 class Server {
@@ -33,9 +34,9 @@ private:
     void send(int client_socket, const std::string &message);
     void cleanup();
     
-    int setup_poll_fds(struct pollfd *fds);
+    int setup_poll_fds(std::vector<struct pollfd> &fds);
     void handle_client_disconnect(int client_fd);
-    void handle_clients_input(struct pollfd *fds);
+    void handle_clients_input(const std::vector<struct pollfd> &fds);
 };
 
 #endif /* !SERVER_HPP_ */

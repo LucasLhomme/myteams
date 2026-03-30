@@ -10,6 +10,8 @@
 #include <cerrno>
 #include <cstring>
 #include <iostream>
+#include <array>
+#include <vector>
 #include <poll.h>
 
 #include <arpa/inet.h>
@@ -81,12 +83,12 @@ int Server::accept_client()
 
 std::string Server::read_command(int client_socket)
 {
-    char buffer[256];
-    ssize_t bytes_read = read(client_socket, buffer, sizeof(buffer) - 1);
+    std::array<char, 256> buffer{};
+    ssize_t bytes_read = read(client_socket, buffer.data(), buffer.size() - 1);
     
     if (bytes_read > 0) {
         buffer[bytes_read] = '\0';
-        std::string command(buffer);
+        std::string command(buffer.data());
         size_t end = command.find_last_not_of(" \n\r\t");
         if (end != std::string::npos)
             command = command.substr(0, end + 1);
@@ -109,11 +111,11 @@ void Server::handle_command(int client_socket, const std::string &command)
     }
 }
 
-int Server::setup_poll_fds(struct pollfd *fds)
+int Server::setup_poll_fds(std::vector<struct pollfd> &fds)
 {
     int index = 1;
     
-    memset(fds, 0, sizeof(struct pollfd) * 500);
+    std::fill(fds.begin(), fds.end(), pollfd{});
     fds[0].fd = _server_socket;
     fds[0].events = POLLIN;
     
@@ -138,7 +140,7 @@ void Server::handle_client_disconnect(int client_fd)
     }
 }
 
-void Server::handle_clients_input(struct pollfd *fds)
+void Server::handle_clients_input(const std::vector<struct pollfd> &fds)
 {
     int pollfd_idx = 1;
     for (size_t i = 0; i < _clients.size(); i++) {
@@ -175,12 +177,12 @@ void Server::start()
 
     std::cout << "Server listening on port " << _port << std::endl;
 
-    struct pollfd *fds = new struct pollfd[500];
+    std::vector<struct pollfd> fds(500);
     int index;
 
     while (true) {
         index = setup_poll_fds(fds);
-        if (poll(fds, index, -1) < 0)
+        if (poll(fds.data(), index, -1) < 0)
             break;
 
         if (fds[0].revents & POLLIN) {
@@ -198,7 +200,6 @@ void Server::start()
         }
     }
 
-    delete[] fds;
     cleanup();
 }
 
