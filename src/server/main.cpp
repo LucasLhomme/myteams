@@ -2,14 +2,12 @@
 ** EPITECH PROJECT, 2026
 ** MY-TEAMS-1
 ** File description:
-** main
+** server main
 */
-
-#include <iostream>
-
 
 int main(int ac, char **av)
 {
-    std::cout << "Hello World!" << std::endl;
+    (void)ac;
+    (void)av;
     return 0;
 }
