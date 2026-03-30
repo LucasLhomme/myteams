@@ -53,7 +53,7 @@ void CommandHandler::process_command(const std::string& command)
 {
     for (const auto& [cmd_name, cmd_obj] : _commands) {
         if (command.find(cmd_name) != std::string::npos) {
-            // Ici, vous pourrez vérifier l'authentification :
+            // Here you can check for authentication:
             // if (cmd_obj->requiresAuth() && !user_is_logged_in) { return; }
             execute_command(cmd_name);
             break;
