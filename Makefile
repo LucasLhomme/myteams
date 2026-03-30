@@ -6,7 +6,7 @@
 ##
 
 SRC_SERVER  =   $(wildcard src/server/*.cpp)
-SRC_CLI     =   $(wildcard src/cli/*.cpp)
+SRC_CLI     =   $(wildcard src/cli/*.cpp) $(wildcard src/cli/commands/*.cpp)
 
 SRC_TESTS   =   $(wildcard tests/*.cpp)
 

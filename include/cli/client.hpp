@@ -8,9 +8,8 @@
 #ifndef CLIENT_HPP_
 #define CLIENT_HPP_
 
-extern "C" {
-    #include "../../libs/myteams/logging_client.h"
-}
+#include "../../libs/myteams/logging_client.h"
+#include <string>
 
 namespace IClient {
     class IClient {
@@ -18,6 +17,8 @@ namespace IClient {
             virtual ~IClient() = default;
             virtual bool GetClientStatus(void) = 0;
             virtual void SetClientStatus(bool status) = 0;
+            virtual bool is_auth() const = 0;
+            virtual void launch_client(std::string ip, std::string port) = 0;
     };
 }
 
@@ -31,6 +32,11 @@ namespace Cli {
 
             bool GetClientStatus(void) override { return _client_status; }
             void SetClientStatus(bool status) override { _client_status = status; }
+            bool is_auth() const override { return _client_status; }
+            void launch_client(std::string ip, std::string port) override;
+
+
+            // ECAPSULED FUNCTIONS
 
             int EventLoggedIn(char const *user_uuid, const char *user_name) const
             { return client_event_logged_in(user_uuid, user_name); }
