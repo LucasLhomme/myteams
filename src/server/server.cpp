@@ -202,6 +202,3 @@ void Server::start()
 
     cleanup();
 }
-
-
-
