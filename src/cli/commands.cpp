@@ -39,22 +39,25 @@ CommandHandler::CommandHandler()
     _commands["info"] = std::make_unique<InfoCommand>();
 }
 
-void CommandHandler::execute_command(const std::string& command)
+void CommandHandler::execute_command(const std::string& command, const std::string& input, Cli::Socket& socket)
 {
     auto it = _commands.find(command);
     if (it != _commands.end()) {
-        it->second->execute();
+        // Ajout d'un \r\n à la fin de la commande pour le protocole
+        std::string input_with_crlf = input;
+        if (input_with_crlf.size() < 2 || input_with_crlf.substr(input_with_crlf.size()-2) != "\r\n")
+            input_with_crlf += "\r\n";
+        it->second->execute(input_with_crlf, socket);
     } else {
         std::cout << "Unknown command" << std::endl;
     }
 }
 
-void CommandHandler::process_command(const std::string& command)
+void CommandHandler::process_command(const std::string& command, Cli::Socket& socket)
 {
     for (const auto& [cmd_name, cmd_obj] : _commands) {
         if (command.find(cmd_name) != std::string::npos) {
-            execute_command(cmd_name);
-            std::cout << "Executed command: " << cmd_name << std::endl;
+            execute_command(cmd_name, command, socket);
             break;
         }
     }

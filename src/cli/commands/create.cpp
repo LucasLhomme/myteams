@@ -8,7 +8,9 @@
 #include "../../../include/cli/commands/create.hpp"
 #include <iostream>
 
-void CreateCommand::execute()
+void CreateCommand::execute(const std::string& input, Cli::Socket& socket)
 {
-    // create a new team
+    socket.send_data(input + "\n");
+    std::string response = socket.receive_data();
+    std::cout << response << std::endl;
 }

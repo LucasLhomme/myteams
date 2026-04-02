@@ -8,7 +8,9 @@
 #include "../../../include/cli/commands/info.hpp"
 #include <iostream>
 
-void InfoCommand::execute()
+void InfoCommand::execute(const std::string& input, Cli::Socket& socket)
 {
-    // get team information
+    socket.send_data(input + "\n");
+    std::string response = socket.receive_data();
+    std::cout << response << std::endl;
 }

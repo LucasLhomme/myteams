@@ -5,45 +5,38 @@
 ** server
 */
 
-#include <csignal>
-#include <cstdlib>
-#include <cerrno>
-#include <cstring>
-#include <iostream>
-#include <array>
-#include <vector>
-#include <poll.h>
-
-#include <arpa/inet.h>
-#include <netinet/in.h>
-#include <sys/socket.h>
-#include <unistd.h>
-
-#include "server.hpp"
-
-Server::Server(int port) : _port(port), _server_socket(-1)
-{
+#include "server/server.hpp"
+extern "C" {
+#include "../../libs/myteams/logging_server.h"
 }
 
+#include <iostream>
+#include <cstring>
+#include <cerrno>
+#include <algorithm>
+#include <unistd.h>
+#include <arpa/inet.h>
+#include <sys/socket.h>
+
+Server::Server(int port) : _port(port)
+{
+    init_commands();
+}
 Server::~Server()
 {
     cleanup();
 }
 
-void Server::send(int client_socket, const std::string &message)
-{
-    ::send(client_socket, message.c_str(), message.length(), MSG_NOSIGNAL);
-}
-
 bool Server::init_socket()
 {
-    _server_socket = socket(AF_INET, SOCK_STREAM, 0);
+    _server_socket = ::socket(AF_INET, SOCK_STREAM, 0);
     if (_server_socket == -1)
         return false;
 
     int enable = 1;
-    if (setsockopt(_server_socket, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(enable)) == -1) {
-        close(_server_socket);
+    if (::setsockopt(_server_socket, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(enable)) == -1) {
+        ::close(_server_socket);
+        _server_socket = -1;
         return false;
     }
     return true;
@@ -56,151 +49,140 @@ bool Server::bind_socket()
     server_addr.sin_addr.s_addr = htonl(INADDR_ANY);
     server_addr.sin_port = htons(static_cast<uint16_t>(_port));
 
-    if (bind(_server_socket, reinterpret_cast<sockaddr *>(&server_addr),
-            sizeof(server_addr)) == -1)
-        return false;
-    return true;
+    return ::bind(_server_socket, reinterpret_cast<sockaddr *>(&server_addr), sizeof(server_addr)) != -1;
 }
 
 bool Server::listen_socket()
 {
-    if (listen(_server_socket, 32) == -1)
+    if (::listen(_server_socket, 32) == -1)
         return false;
     return true;
 }
 
-int Server::accept_client()
+void Server::accept_client()
 {
     sockaddr_in client_addr{};
     socklen_t client_len = sizeof(client_addr);
     
-    int client_socket = accept(_server_socket, 
-        reinterpret_cast<sockaddr *>(&client_addr),
-        &client_len);
-    return client_socket;
-}
-
-std::string Server::read_command(int client_socket)
-{
-    std::array<char, 256> buffer{};
-    ssize_t bytes_read = read(client_socket, buffer.data(), buffer.size() - 1);
-    
-    if (bytes_read > 0) {
-        buffer[bytes_read] = '\0';
-        std::string command(buffer.data());
-        size_t end = command.find_last_not_of(" \n\r\t");
-        if (end != std::string::npos)
-            command = command.substr(0, end + 1);
-        else
-            return "";
-        return command;
+    int client_socket = ::accept(_server_socket, reinterpret_cast<sockaddr *>(&client_addr), &client_len);
+    if (client_socket != -1) {
+        _pollfds.push_back({client_socket, POLLIN, 0});
+        _client_buffers[client_socket] = "";
+        std::cout << "New client connected on socket " << client_socket << std::endl;
     }
-    return "";
 }
 
-void Server::handle_command(int client_socket, const std::string &command)
+void Server::send_response(int client_socket, const std::string &message)
 {
-    if (command == "exit") {
-        send(client_socket, "Goodbye!\n");
-        handle_client_disconnect(client_socket);
-    } else if (command == "help") {
-        send(client_socket, "Commands: exit, help\n");
+    std::string msg_to_send = message;
+    if (msg_to_send.size() < 2 || msg_to_send.substr(msg_to_send.size() - 2) != "\r\n") {
+        msg_to_send += "\r\n";
+    }
+    ::send(client_socket, msg_to_send.c_str(), msg_to_send.length(), MSG_NOSIGNAL);
+}
+
+void Server::remove_client(int client_socket)
+{
+    auto it = _socket_to_name.find(client_socket);
+    if (it != _socket_to_name.end()) {
+        server_event_user_logged_out(it->second.c_str());
+        _socket_to_name.erase(it);
+    }
+    ::close(client_socket);
+    _client_buffers.erase(client_socket);
+    
+    _pollfds.erase(
+        std::remove_if(_pollfds.begin(), _pollfds.end(),
+            [client_socket](const struct pollfd &pfd) { return pfd.fd == client_socket; }),
+        _pollfds.end()
+    );
+    std::cout << "Client " << client_socket << " disconnected" << std::endl;
+}
+
+
+
+void Server::extract_and_process_commands(int client_socket)
+{
+    auto &buffer = _client_buffers[client_socket];
+    size_t pos;
+
+    while ((pos = buffer.find("\r\n")) != std::string::npos) {
+        std::string command = buffer.substr(0, pos);
+        buffer.erase(0, pos + 2);
+
+        while (!command.empty() && std::isspace(static_cast<unsigned char>(command.back())))
+            command.pop_back();
+
+        if (!command.empty()) {
+            process_command(client_socket, command);
+        }
+    }
+    if (buffer.size() > 4096) {
+        buffer.clear();
+    }
+}
+
+void Server::handle_client_data(size_t poll_index)
+{
+    int client_socket = _pollfds[poll_index].fd;
+    char chunk[1024];
+    ssize_t bytes_read = ::recv(client_socket, chunk, sizeof(chunk), 0);
+
+    if (bytes_read <= 0) {
+        remove_client(client_socket);
     } else {
-        send(client_socket, "Unknown command\n");
-    }
-}
-
-int Server::setup_poll_fds(std::vector<struct pollfd> &fds)
-{
-    int index = 1;
-    
-    std::fill(fds.begin(), fds.end(), pollfd{});
-    fds[0].fd = _server_socket;
-    fds[0].events = POLLIN;
-    
-    for (size_t i = 0; i < _clients.size(); i++) {
-        if (_clients[i] != -1) {
-            fds[index].fd = _clients[i];
-            fds[index].events = POLLIN;
-            index++;
-        }
-    }
-    return index;
-}
-
-void Server::handle_client_disconnect(int client_fd)
-{
-    close(client_fd);
-    for (size_t i = 0; i < _clients.size(); i++) {
-        if (_clients[i] == client_fd) {
-            _clients[i] = -1;
-            break;
-        }
-    }
-}
-
-void Server::handle_clients_input(const std::vector<struct pollfd> &fds)
-{
-    int pollfd_idx = 1;
-    for (size_t i = 0; i < _clients.size(); i++) {
-        if (_clients[i] != -1) {
-            if (fds[pollfd_idx].revents & POLLIN) {
-                std::string cmd = read_command(_clients[i]);
-                if (cmd.empty()) {
-                    handle_client_disconnect(_clients[i]);
-                } else {
-                    handle_command(_clients[i], cmd);
-                }
-            }
-            pollfd_idx++;
-        }
+        _client_buffers[client_socket].append(chunk, bytes_read);
+        extract_and_process_commands(client_socket);
     }
 }
 
 void Server::cleanup()
 {
-    for (size_t i = 0; i < _clients.size(); i++) {
-        if (_clients[i] != -1)
-            close(_clients[i]);
+    for (const auto &[client_socket, buffer] : _client_buffers) {
+        ::close(client_socket);
     }
-    if (_server_socket != -1)
-        close(_server_socket);
+    _client_buffers.clear();
+
+    if (_server_socket != -1) {
+        ::close(_server_socket);
+        _server_socket = -1;
+    }
+    _pollfds.clear();
 }
 
 void Server::start()
 {
-    if (!init_socket() || !bind_socket() || !listen_socket()) {
-        cleanup();
-        return;
-    }
+    try {
+        if (!init_socket() || !bind_socket() || !listen_socket()) {
+            std::cerr << "[ERROR] Initialization failed: " << strerror(errno) << std::endl;
+            cleanup();
+            return;
+        }
 
-    std::cout << "Server listening on port " << _port << std::endl;
+        std::cout << "Server listening on port " << _port << std::endl;
 
-    std::vector<struct pollfd> fds(500);
-    int index;
+        _pollfds.push_back({_server_socket, POLLIN, 0});
 
-    while (true) {
-        index = setup_poll_fds(fds);
-        if (poll(fds.data(), index, -1) < 0)
-            break;
+        while (true) {
+            int poll_ret = ::poll(_pollfds.data(), _pollfds.size(), -1);
+            if (poll_ret < 0) {
+                std::cerr << "[ERROR] Poll failed: " << strerror(errno) << std::endl;
+                break;
+            }
 
-        if (fds[0].revents & POLLIN) {
-            int client_socket = accept_client();
-            if (client_socket != -1) {
-                _clients.push_back(client_socket);
-                std::cout << "New client connected" << std::endl;
+            for (int i = static_cast<int>(_pollfds.size()) - 1; i >= 0; i--) {
+                if (_pollfds[i].revents & POLLIN) {
+                    if (_pollfds[i].fd == _server_socket) {
+                        accept_client();
+                    } else {
+                        handle_client_data(i);
+                    }
+                }
             }
         }
-        handle_clients_input(fds);
-
-        for (int i = _clients.size() - 1; i >= 0; i--) {
-            if (_clients[i] == -1)
-                _clients.erase(_clients.begin() + i);
-        }
+        cleanup();
+    } catch (const std::exception &e) {
+        std::cerr << "Server error: " << e.what() << std::endl;
+        cleanup();
     }
-
-    cleanup();
 }
-
-
-

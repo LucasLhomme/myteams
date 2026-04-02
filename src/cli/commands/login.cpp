@@ -8,7 +8,9 @@
 #include "../../../include/cli/commands/login.hpp"
 #include <iostream>
 
-void LoginCommand::execute()
+void LoginCommand::execute(const std::string& input, Cli::Socket& socket)
 {
-    // login user
+    socket.send_data(input + "\n");
+    std::string response = socket.receive_data();
+    std::cout << response << std::endl;
 }
