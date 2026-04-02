@@ -8,7 +8,9 @@
 #include "../../../include/cli/commands/unsubscribe.hpp"
 #include <iostream>
 
-void UnsubscribeCommand::execute()
+void UnsubscribeCommand::execute(const std::string& input, Cli::Socket& socket)
 {
-    // unsubscribe from a team
+    socket.send_data(input + "\n");
+    std::string response = socket.receive_data();
+    std::cout << response << std::endl;
 }

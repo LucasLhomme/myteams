@@ -8,7 +8,9 @@
 #include "../../../include/cli/commands/subscribe.hpp"
 #include <iostream>
 
-void SubscribeCommand::execute()
+void SubscribeCommand::execute(const std::string& input, Cli::Socket& socket)
 {
-    // subscribe to a team
+    socket.send_data(input + "\n");
+    std::string response = socket.receive_data();
+    std::cout << response << std::endl;
 }
