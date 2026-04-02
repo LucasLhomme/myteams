@@ -8,7 +8,9 @@
 #include "../../../include/cli/commands/use.hpp"
 #include <iostream>
 
-void UseCommand::execute()
+void UseCommand::execute(const std::string& input, Cli::Socket& socket)
 {
-    // use a team
+    socket.send_data(input + "\n");
+    std::string response = socket.receive_data();
+    std::cout << response << std::endl;
 }

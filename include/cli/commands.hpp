@@ -11,11 +11,12 @@
 #include <string>
 #include <unordered_map>
 #include <memory>
+#include "./socket.hpp"
 
 class ICommand {
 public:
     virtual ~ICommand() = default;
-    virtual void execute() = 0;
+    virtual void execute(const std::string& input, Cli::Socket& socket) = 0;
     virtual bool requiresAuth() const = 0;
     virtual std::string getName() const = 0;
 };
@@ -27,8 +28,8 @@ public:
     CommandHandler();
     ~CommandHandler() = default;
     
-    void process_command(const std::string& command);
-    void execute_command(const std::string& command);
+    void process_command(const std::string& command, Cli::Socket& socket);
+    void execute_command(const std::string& command, const std::string& input, Cli::Socket& socket);
 };
 
 #endif /* !COMMANDS_HPP_ */

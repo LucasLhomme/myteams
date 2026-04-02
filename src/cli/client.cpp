@@ -33,7 +33,7 @@ namespace Cli {
             if (!std::getline(std::cin, input)) {
                 break;
             }
-            command_handler.process_command(input);
+            command_handler.process_command(input, client_socket);
         }
         client_socket.close_socket();
         std::cout << "Client socket closed successfully" << std::endl;

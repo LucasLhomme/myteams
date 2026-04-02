@@ -8,7 +8,9 @@
 #include "../../../include/cli/commands/help.hpp"
 #include <iostream>
 
-void HelpCommand::execute()
+void HelpCommand::execute(const std::string& input, Cli::Socket& socket)
 {
-    // print help
+    socket.send_data(input + "\n");
+    std::string response = socket.receive_data();
+    std::cout << response << std::endl;
 }

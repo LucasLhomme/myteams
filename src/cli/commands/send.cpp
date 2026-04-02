@@ -8,7 +8,9 @@
 #include "../../../include/cli/commands/send.hpp"
 #include <iostream>
 
-void SendCommand::execute()
+void SendCommand::execute(const std::string& input, Cli::Socket& socket)
 {
-    // send a message
+    socket.send_data(input + "\n");
+    std::string response = socket.receive_data();
+    std::cout << response << std::endl;
 }

@@ -8,7 +8,9 @@
 #include "../../../include/cli/commands/users.hpp"
 #include <iostream>
 
-void UsersCommand::execute()
+void UsersCommand::execute(const std::string& input, Cli::Socket& socket)
 {
-    // list all users
+    socket.send_data(input + "\n");
+    std::string response = socket.receive_data();
+    std::cout << response << std::endl;
 }

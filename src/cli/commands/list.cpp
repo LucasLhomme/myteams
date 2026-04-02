@@ -8,7 +8,9 @@
 #include "../../../include/cli/commands/list.hpp"
 #include <iostream>
 
-void ListCommand::execute()
+void ListCommand::execute(const std::string& input, Cli::Socket& socket)
 {
-    // list teams
+    socket.send_data(input + "\n");
+    std::string response = socket.receive_data();
+    std::cout << response << std::endl;
 }

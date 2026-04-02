@@ -8,7 +8,9 @@
 #include "../../../include/cli/commands/logout.hpp"
 #include <iostream>
 
-void LogoutCommand::execute()
+void LogoutCommand::execute(const std::string& input, Cli::Socket& socket)
 {
-    // logout user
+    socket.send_data(input + "\n");
+    std::string response = socket.receive_data();
+    std::cout << response << std::endl;
 }
