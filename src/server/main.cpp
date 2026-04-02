@@ -7,7 +7,7 @@
 
 #include <iostream>
 #include <cstdlib>
-#include "server.hpp"
+#include "./server/server.hpp"
 
 int main(int ac, char **av)
 {
