@@ -58,7 +58,6 @@ void CommandHandler::process_command(const std::string& command, Cli::Socket& so
     for (const auto& [cmd_name, cmd_obj] : _commands) {
         if (command.find(cmd_name) != std::string::npos) {
             execute_command(cmd_name, command, socket);
-            std::cout << "Executed command: " << cmd_name << std::endl;
             break;
         }
     }
