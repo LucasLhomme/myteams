@@ -38,13 +38,13 @@ void Server::cmd_login(int client_socket, const std::vector<std::string> &args)
         user->is_online = true;
         _users.push_back(user);
         
-        char u_str[37];
+        char u_str[MAX_UUID_LENGTH];
         uuid_unparse(user->uuid, u_str);
         server_event_user_created(u_str, user->username);
     }
 
     user->is_online = true;
-    char uuid_str[37];
+    char uuid_str[MAX_UUID_LENGTH];
     uuid_unparse(user->uuid, uuid_str);
     
     _socket_to_name[client_socket] = user->username;

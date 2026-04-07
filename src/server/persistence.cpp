@@ -22,13 +22,13 @@ void Server::save_state() {
     return;
 
   for (const auto &user : _users) {
-    char uuid_str[37];
+    char uuid_str[MAX_UUID_LENGTH];
     uuid_unparse(user->uuid, uuid_str);
     file << "USER " << uuid_str << " " << user->username << std::endl;
   }
 
   for (const auto &team : _teams) {
-    char uuid_str[37];
+    char uuid_str[MAX_UUID_LENGTH];
     uuid_unparse(team->uuid, uuid_str);
     file << "TEAM " << uuid_str << " " << team->name << " \"" << team->description << "\"" << std::endl;
   }

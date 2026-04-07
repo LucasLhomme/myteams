@@ -101,7 +101,7 @@ bool Server::handle_writable(size_t index) {
 
 bool Server::handle_client_data(size_t poll_index) {
   int client_socket = _pollfds[poll_index].fd;
-  char chunk[1024];
+  char chunk[MAX_CHUNK_SIZE];
   ssize_t bytes_read = ::recv(client_socket, chunk, sizeof(chunk), 0);
 
   if (bytes_read <= 0) {

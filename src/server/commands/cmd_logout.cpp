@@ -19,7 +19,7 @@ void Server::cmd_logout(int client_socket, const std::vector<std::string> &args)
     std::string uuid_str = it->second;
 
     for (auto &user : _users) {
-      char u_str[37];
+      char u_str[MAX_UUID_LENGTH];
       uuid_unparse(user->uuid, u_str);
       if (std::string(u_str) == uuid_str) {
         user->is_online = false;
