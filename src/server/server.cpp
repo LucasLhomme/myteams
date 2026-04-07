@@ -2,7 +2,7 @@
 ** EPITECH PROJECT, 2026
 ** my_teams
 ** File description:
-** server
+** server core
 */
 
 #include "server/server.hpp"
@@ -12,47 +12,21 @@ extern "C" {
 
 #include <algorithm>
 #include <arpa/inet.h>
+#include <sys/socket.h>
+#include <unistd.h>
 #include <cerrno>
 #include <cstring>
 #include <iostream>
-#include <sys/socket.h>
-#include <unistd.h>
+
+extern bool server_running;
 
 Server::Server(int port) : _port(port) {
   init_commands();
+  load_state();
   _pollfds.push_back(make_pollfd(STDIN_FILENO));
 }
-Server::~Server() { cleanup(); }
-
-bool Server::init_socket() {
-  _server_socket = ::socket(AF_INET, SOCK_STREAM, 0);
-  if (_server_socket == -1)
-    return false;
-
-  int enable = 1;
-  if (::setsockopt(_server_socket, SOL_SOCKET, SO_REUSEADDR, &enable,
-                   sizeof(enable)) == -1) {
-    ::close(_server_socket);
-    _server_socket = -1;
-    return false;
-  }
-  return true;
-}
-
-bool Server::bind_socket() {
-  sockaddr_in server_addr{};
-  server_addr.sin_family = AF_INET;
-  server_addr.sin_addr.s_addr = htonl(INADDR_ANY);
-  server_addr.sin_port = htons(static_cast<uint16_t>(_port));
-
-  return ::bind(_server_socket, reinterpret_cast<sockaddr *>(&server_addr),
-                sizeof(server_addr)) != -1;
-}
-
-bool Server::listen_socket() {
-  if (::listen(_server_socket, 32) == -1)
-    return false;
-  return true;
+Server::~Server() { 
+    cleanup(); 
 }
 
 void Server::accept_client() {
@@ -62,10 +36,10 @@ void Server::accept_client() {
   int client_socket = ::accept(
       _server_socket, reinterpret_cast<sockaddr *>(&client_addr), &client_len);
   if (client_socket != -1) {
-    _pollfds.push_back({client_socket, POLLIN, 0});
+    _pollfds.push_back(make_pollfd(client_socket));
     _client_buffers[client_socket] = "";
-    std::cout << "New client connected on socket " << client_socket
-              << std::endl;
+    _output_buffers[client_socket] = "";
+    std::cout << "New client connected on socket " << client_socket << std::endl;
   }
 }
 
@@ -75,63 +49,76 @@ void Server::send_response(int client_socket, const std::string &message) {
       msg_to_send.substr(msg_to_send.size() - 2) != "\r\n") {
     msg_to_send += "\r\n";
   }
-  ::send(client_socket, msg_to_send.c_str(), msg_to_send.length(),
-         MSG_NOSIGNAL);
+  _output_buffers[client_socket] += msg_to_send;
+  for (auto &pfd : _pollfds) {
+    if (pfd.fd == client_socket) {
+      pfd.events |= POLLOUT;
+      break;
+    }
+  }
 }
 
 void Server::remove_client(int client_socket) {
-  auto it = _socket_to_name.find(client_socket);
-  if (it != _socket_to_name.end()) {
-    server_event_user_logged_out(it->second.c_str());
-    _socket_to_name.erase(it);
+  auto it_uuid = _socket_to_uuid.find(client_socket);
+  if (it_uuid != _socket_to_uuid.end()) {
+    server_event_user_logged_out(it_uuid->second.c_str());
+    _socket_to_uuid.erase(it_uuid);
   }
+  _socket_to_name.erase(client_socket);
   ::close(client_socket);
   _client_buffers.erase(client_socket);
 
-  _pollfds.erase(std::remove_if(_pollfds.begin(), _pollfds.end(),
-                                [client_socket](const struct pollfd &pfd) {
-                                  return pfd.fd == client_socket;
-                                }),
-                 _pollfds.end());
+  for (auto it = _pollfds.begin(); it != _pollfds.end(); ++it) {
+    if (it->fd == client_socket) {
+      _pollfds.erase(it);
+      break;
+    }
+  }
   std::cout << "Client " << client_socket << " disconnected" << std::endl;
 }
 
-void Server::extract_and_process_commands(int client_socket) {
-  auto &buffer = _client_buffers[client_socket];
-  size_t pos;
+bool Server::handle_writable(size_t index) {
+  int client_socket = _pollfds[index].fd;
+  auto &buffer = _output_buffers[client_socket];
 
-  while ((pos = buffer.find("\r\n")) != std::string::npos) {
-    std::string command = buffer.substr(0, pos);
-    buffer.erase(0, pos + 2);
+  if (buffer.empty()) {
+    _pollfds[index].events &= ~POLLOUT;
+    return false;
+  }
 
-    while (!command.empty() &&
-           std::isspace(static_cast<unsigned char>(command.back())))
-      command.pop_back();
-
-    if (!command.empty()) {
-      process_command(client_socket, command);
+  ssize_t sent = ::send(client_socket, buffer.c_str(), buffer.size(), MSG_NOSIGNAL);
+  if (sent > 0) {
+    buffer.erase(0, sent);
+    if (buffer.empty()) {
+      _pollfds[index].events &= ~POLLOUT;
     }
+  } else if (sent == -1 && errno != EAGAIN && errno != EWOULDBLOCK) {
+    remove_client(client_socket);
+    return true;
   }
-  if (buffer.size() > 4096) {
-    buffer.clear();
-  }
+  return false;
 }
 
-void Server::handle_client_data(size_t poll_index) {
+bool Server::handle_client_data(size_t poll_index) {
   int client_socket = _pollfds[poll_index].fd;
   char chunk[1024];
   ssize_t bytes_read = ::recv(client_socket, chunk, sizeof(chunk), 0);
 
   if (bytes_read <= 0) {
     remove_client(client_socket);
+    return true;
   } else {
     _client_buffers[client_socket].append(chunk, bytes_read);
     extract_and_process_commands(client_socket);
+    if (_client_buffers.find(client_socket) == _client_buffers.end())
+      return true;
   }
+  return false;
 }
 
 void Server::cleanup() {
   for (const auto &[client_socket, buffer] : _client_buffers) {
+    (void)buffer;
     ::close(client_socket);
   }
   _client_buffers.clear();
@@ -147,8 +134,7 @@ void Server::cleanup() {
 int Server::start() {
   try {
     if (!init_socket() || !bind_socket() || !listen_socket()) {
-      std::cerr << "[ERROR] Initialization failed: " << strerror(errno)
-                << std::endl;
+      std::cout << "[ERROR] Initialization failed: " << strerror(errno) << std::endl;
       cleanup();
       return 84;
     }
@@ -157,43 +143,40 @@ int Server::start() {
 
     _pollfds.push_back(make_pollfd(_server_socket));
 
-    while (true) {
-      int poll_ret = ::poll(_pollfds.data(), _pollfds.size(), -1);
+    while (server_running) {
+      int poll_ret = ::poll(_pollfds.data(), _pollfds.size(), 100);
       if (poll_ret < 0) {
         if (errno == EINTR)
           continue;
-        std::cerr << "[ERROR] Poll failed: " << strerror(errno) << std::endl;
+        std::cout << "[ERROR] Poll failed: " << strerror(errno) << std::endl;
         break;
       }
 
       for (int i = static_cast<int>(_pollfds.size()) - 1; i >= 0; i--) {
+        bool removed = false;
         if (_pollfds[i].revents & POLLIN) {
           if (_pollfds[i].fd == _server_socket) {
             accept_client();
           } else if (_pollfds[i].fd == STDIN_FILENO) {
             char buf[1];
             if (::read(STDIN_FILENO, buf, 1) <= 0) {
-              return 0;
+              server_running = false;
             }
           } else {
-            handle_client_data(i);
+            removed = handle_client_data(i);
           }
+        }
+        if (!removed && (_pollfds[i].revents & POLLOUT)) {
+          removed = handle_writable(i);
         }
       }
     }
+    save_state();
     cleanup();
     return 0;
   } catch (const std::exception &e) {
-    std::cerr << "Server error: " << e.what() << std::endl;
+    std::cout << "Server error: " << e.what() << std::endl;
     cleanup();
     return 84;
   }
-}
-
-struct pollfd Server::make_pollfd(int fd) {
-  struct pollfd pfd;
-  pfd.fd = fd;
-  pfd.events = POLLIN;
-  pfd.revents = 0;
-  return pfd;
 }
