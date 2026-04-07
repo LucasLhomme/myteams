@@ -58,6 +58,6 @@ void Server::extract_and_process_commands(int client_socket) {
       send_response(client_socket, "Unknown command");
     }
   }
-  if (buffer.size() > 4096)
+  if (buffer.size() > MAX_BUFFER_SIZE)
     buffer.clear();
 }
