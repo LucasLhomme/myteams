@@ -62,17 +62,23 @@ namespace Cli {
         }
     }
 
-    static void remove_blank_lines(std::string &str)
+
+    static std::string clean_response(const std::string &str)
     {
         std::istringstream iss(str);
-        std::string line;
-        std::string result;
+        std::string line, result;
+        bool first = true;
         while (std::getline(iss, line)) {
+            if (!line.empty() && line.back() == '\r') {
+                line.pop_back();
+            }
             if (!line.empty()) {
-                result += line + "\n";
+                if (!first) result += "\n";
+                result += line;
+                first = false;
             }
         }
-        str = result;
+        return result;
     }
 
     std::string Socket::receive_data(size_t max_size)
@@ -84,8 +90,7 @@ namespace Cli {
             throw Exception("Failed to receive data");
         }
         buffer.resize(received);
-        remove_blank_lines(buffer);
-        return buffer;
+        return clean_response(buffer);
     }
 
     int Socket::get_sockfd() const
