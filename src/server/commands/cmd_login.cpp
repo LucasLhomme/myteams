@@ -5,16 +5,17 @@
 ** login command
 */
 
+#include "server/commands/cmd_login.hpp"
 #include "server/server.hpp"
 #include <cstring>
 extern "C" {
 #include "../../../libs/myteams/logging_server.h"
 }
 
-void Server::cmd_login(int client_socket, const std::vector<std::string> &args)
+void CmdLogin::execute(Server &server, int client_socket, const std::vector<std::string> &args)
 {
     if (args.size() < 2) {
-        send_response(client_socket, "Usage: /login [user_name]");
+        server.send_response(client_socket, "Usage: /login [user_name]");
         return;
     }
 
@@ -24,7 +25,7 @@ void Server::cmd_login(int client_socket, const std::vector<std::string> &args)
     }
 
     User *user = nullptr;
-    for (auto &tmp : _users) {
+    for (auto &tmp : server.get_users()) {
         if (std::string(tmp->username) == username) {
             user = tmp;
             break;
@@ -36,7 +37,7 @@ void Server::cmd_login(int client_socket, const std::vector<std::string> &args)
         uuid_generate(user->uuid);
         std::strncpy(user->username, username.c_str(), MAX_NAME_LENGTH);
         user->is_online = true;
-        _users.push_back(user);
+        server.get_users().push_back(user);
         
         char u_str[MAX_UUID_LENGTH];
         uuid_unparse(user->uuid, u_str);
@@ -47,10 +48,10 @@ void Server::cmd_login(int client_socket, const std::vector<std::string> &args)
     char uuid_str[MAX_UUID_LENGTH];
     uuid_unparse(user->uuid, uuid_str);
     
-    _socket_to_name[client_socket] = user->username;
-    _socket_to_uuid[client_socket] = uuid_str;
+    server.get_socket_to_name()[client_socket] = user->username;
+    server.get_socket_to_uuid()[client_socket] = uuid_str;
 
     server_event_user_logged_in(uuid_str);
-    send_response(client_socket, "Login success: " + std::string(uuid_str));
-    save_state();
+    server.send_response(client_socket, "Login success: " + std::string(uuid_str));
+    server.save_state();
 }

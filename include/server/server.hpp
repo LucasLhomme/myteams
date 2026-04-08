@@ -15,24 +15,10 @@
 #include <uuid/uuid.h>
 #include <vector>
 
-#define MAX_NAME_LENGTH 32
-#define MAX_DESCRIPTION_LENGTH 255
-#define MAX_BODY_LENGTH 512
-#define MAX_UUID_LENGTH 37
-#define MAX_CHUNK_SIZE 1024
-#define MAX_BUFFER_SIZE 4096
-
-struct User {
-  uuid_t uuid;
-  char username[MAX_NAME_LENGTH];
-  bool is_online;
-};
-
-struct Team {
-  uuid_t uuid;
-  char name[MAX_NAME_LENGTH];
-  char description[MAX_DESCRIPTION_LENGTH];
-};
+#include "constants.hpp"
+#include "user.hpp"
+#include "team.hpp"
+#include "commands/CommandFactory.hpp"
 
 class Server {
 public:
@@ -40,6 +26,18 @@ public:
   ~Server();
 
   int start();
+
+  const std::vector<User *> &get_users() const { return _users; }
+  std::vector<User *> &get_users() { return _users; }
+  
+  std::unordered_map<int, std::string> &get_socket_to_name() { return _socket_to_name; }
+  std::unordered_map<int, std::string> &get_socket_to_uuid() { return _socket_to_uuid; }
+
+  void send_response(int client_socket, const std::string &message);
+  void save_state();
+  
+  std::vector<std::string> get_all_usernames();
+  void GetUserInfo(int client_socket, const std::string &uuid_str);
 
 private:
   int _port;
@@ -55,26 +53,7 @@ private:
 
   using CommandHandler= void (Server::*)(int, const std::vector<std::string> &);
   std::unordered_map<std::string, CommandHandler> _command_map;
-
-  void init_commands();
-  void cmd_login(int client_socket, const std::vector<std::string> &args);
-  void cmd_logout(int client_socket, const std::vector<std::string> &args);
-
-
-  //Users functions
-  void cmd_users(int client_socket, const std::vector<std::string> &args);
-  std::vector<std::string> get_all_usernames();
-  
-  //User function
-  void GetUserInfo(int client_socket, const std::string &uuid_str);
-  void cmd_user(int client_socket, const std::vector<std::string> &args);
-
-  void cmd_send(int client_socket, const std::vector<std::string> &args);
-  void cmd_messages(int client_socket, const std::vector<std::string> &args);
-  void cmd_subscribe(int client_socket, const std::vector<std::string> &args);
-  void cmd_subscribed(int client_socket, const std::vector<std::string> &args);
-  void cmd_unsubscribe(int client_socket, const std::vector<std::string> &args);
-  void cmd_help(int client_socket, const std::vector<std::string> &args);
+  CommandFactory _command_factory;
 
   bool init_socket();
   bool bind_socket();
@@ -84,11 +63,9 @@ private:
   bool handle_client_data(size_t poll_index);
   void extract_and_process_commands(int client_socket);
 
-  void send_response(int client_socket, const std::string &message);
   bool handle_writable(size_t index);
   void remove_client(int client_socket);
   void cleanup();
-  void save_state();
   void load_state();
   struct pollfd make_pollfd(int fd);
 };
