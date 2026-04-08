@@ -9,21 +9,6 @@
 #include <regex>
 #include <iostream>
 
-void Server::init_commands()
-{
-    _command_map["/login"] = &Server::cmd_login;
-    _command_map["/logout"] = &Server::cmd_logout;
-    _command_map["/users"] = &Server::cmd_users;
-    _command_map["/user"] = &Server::cmd_user;
-    _command_map["/send"] = &Server::cmd_send;
-    _command_map["/messages"] = &Server::cmd_messages;
-    _command_map["/subscribe"] = &Server::cmd_subscribe;
-    _command_map["/subscribed"] = &Server::cmd_subscribed;
-    _command_map["/unsubscribe"] = &Server::cmd_unsubscribe;
-    _command_map["/help"] = &Server::cmd_help;
-    _command_map["exit"] = &Server::cmd_logout;
-}
-
 void Server::extract_and_process_commands(int client_socket) {
   auto &buffer = _client_buffers[client_socket];
   size_t pos;
@@ -55,9 +40,13 @@ void Server::extract_and_process_commands(int client_socket) {
     if (iterrator != _socket_to_name.end())
         std::cout << "User: " << iterrator->second << " send processing command " << args[0] << std::endl;
     else
-        std::cout << "User: [unknown] send processing command " << args[0] << std::endl;    auto map_it = _command_map.find(args[0]);
+        std::cout << "User: [unknown] send processing command " << args[0] << std::endl;
+        
+    auto map_it = _command_map.find(args[0]);
 
-    if (map_it != _command_map.end()) {
+    if (auto generic_cmd = _command_factory.get_command(args[0])) {
+        generic_cmd->execute(*this, client_socket, args);
+    } else if (map_it != _command_map.end()) {
       (this->*(map_it->second))(client_socket, args);
     } else {
       send_response(client_socket, "Unknown command");

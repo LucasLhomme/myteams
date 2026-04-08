@@ -5,6 +5,7 @@
 ** logout command
 */
 
+#include "server/commands/cmd_logout.hpp"
 #include "server/server.hpp"
 
 #include <cstring>
@@ -12,24 +13,24 @@ extern "C" {
 #include "../../../libs/myteams/logging_server.h"
 }
 
-void Server::cmd_logout(int client_socket, const std::vector<std::string> &args) {
+void CmdLogout::execute(Server &server, int client_socket, const std::vector<std::string> &args) {
   (void)args;
-  auto it = _socket_to_uuid.find(client_socket);
-  if (it != _socket_to_uuid.end()) {
+  auto it = server.get_socket_to_uuid().find(client_socket);
+  if (it != server.get_socket_to_uuid().end()) {
     std::string uuid_str = it->second;
 
-    for (auto &user : _users) {
+    for (auto &user : server.get_users()) {
       char u_str[MAX_UUID_LENGTH];
       uuid_unparse(user->uuid, u_str);
       if (std::string(u_str) == uuid_str) {
-        send_response(client_socket, "Logout success");
+        server.send_response(client_socket, "Logout success");
         user->is_online = false;
         break;
       }
     }
-    save_state();
+    server.save_state();
     server_event_user_logged_out(uuid_str.c_str());
-    _socket_to_uuid.erase(it);
-    _socket_to_name.erase(client_socket);
+    server.get_socket_to_uuid().erase(it);
+    server.get_socket_to_name().erase(client_socket);
   }
 }
