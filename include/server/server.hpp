@@ -61,10 +61,14 @@ private:
   void cmd_logout(int client_socket, const std::vector<std::string> &args);
 
 
+  //Users functions
   void cmd_users(int client_socket, const std::vector<std::string> &args);
   std::vector<std::string> get_all_usernames();
   
+  //User function
+  void GetUserInfo(int client_socket, const std::string &uuid_str);
   void cmd_user(int client_socket, const std::vector<std::string> &args);
+
   void cmd_send(int client_socket, const std::vector<std::string> &args);
   void cmd_messages(int client_socket, const std::vector<std::string> &args);
   void cmd_subscribe(int client_socket, const std::vector<std::string> &args);

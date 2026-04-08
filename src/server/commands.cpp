@@ -50,14 +50,18 @@ void Server::extract_and_process_commands(int client_socket) {
     }
     if (args.empty()) continue;
 
-    std::cout << "Processing command: [" << args[0] << "]" << std::endl;
-    auto map_it = _command_map.find(args[0]);
+    //log
+    auto iterrator = _socket_to_name.find(client_socket);
+    if (iterrator != _socket_to_name.end())
+        std::cout << "User: " << iterrator->second << " send processing command " << args[0] << std::endl;
+    else
+        std::cout << "User: [unknown] send processing command " << args[0] << std::endl;    auto map_it = _command_map.find(args[0]);
+
     if (map_it != _command_map.end()) {
       (this->*(map_it->second))(client_socket, args);
     } else {
       send_response(client_socket, "Unknown command");
     }
   }
-  if (buffer.size() > MAX_BUFFER_SIZE)
     buffer.clear();
 }

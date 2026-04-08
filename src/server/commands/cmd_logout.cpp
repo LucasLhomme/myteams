@@ -22,15 +22,14 @@ void Server::cmd_logout(int client_socket, const std::vector<std::string> &args)
       char u_str[MAX_UUID_LENGTH];
       uuid_unparse(user->uuid, u_str);
       if (std::string(u_str) == uuid_str) {
+        send_response(client_socket, "Logout success");
         user->is_online = false;
         break;
       }
     }
-    send_response(client_socket, "Logout success");
     save_state();
     server_event_user_logged_out(uuid_str.c_str());
     _socket_to_uuid.erase(it);
     _socket_to_name.erase(client_socket);
   }
-  remove_client(client_socket);
 }
