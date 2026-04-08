@@ -21,7 +21,6 @@ extern "C" {
 extern bool server_running;
 
 Server::Server(int port) : _port(port) {
-  init_commands();
   load_state();
   _pollfds.push_back(make_pollfd(STDIN_FILENO));
 }

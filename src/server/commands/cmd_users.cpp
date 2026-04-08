@@ -5,6 +5,8 @@
 ** user management commands
 */
 
+#include "server/commands/cmd_users.hpp"
+#include "server/commands/cmd_user.hpp"
 #include "server/server.hpp"
 #include <iostream>
 
@@ -32,10 +34,10 @@ void Server::GetUserInfo(int client_socket, const std::string &uuid_str) {
     send_response(client_socket, "ERROR_UNKNOWN_USER:" + uuid_str);
 }
 
-void Server::cmd_users(int client_socket, const std::vector<std::string> &args)
+void CmdUsers::execute(Server &server, int client_socket, const std::vector<std::string> &args)
 {
     (void)args;
-    std::vector<std::string> users_list = get_all_usernames();
+    std::vector<std::string> users_list = server.get_all_usernames();
     std::string response;
     for (const auto& name : users_list) {
         response += name + "\n";
@@ -43,14 +45,14 @@ void Server::cmd_users(int client_socket, const std::vector<std::string> &args)
     if (response.empty())
         response = "No users found.";
     std::cout << response;
-    send_response(client_socket, response);
+    server.send_response(client_socket, response);
 }
 
-void Server::cmd_user(int client_socket, const std::vector<std::string> &args)
+void CmdUser::execute(Server &server, int client_socket, const std::vector<std::string> &args)
 {
     if (args.size() < 2) {
-        send_response(client_socket, "Usage: /user [user_uuid]");
+        server.send_response(client_socket, "Usage: /user [user_uuid]");
         return;
     }
-    GetUserInfo(client_socket, args[1]);
+    server.GetUserInfo(client_socket, args[1]);
 }
