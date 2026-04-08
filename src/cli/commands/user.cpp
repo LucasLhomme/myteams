@@ -13,10 +13,6 @@ extern "C" {
 #include "../../../libs/myteams/logging_client.h"
 }
 
-extern "C" {
-#include "../../../libs/myteams/logging_client.h"
-}
-
 void UserCommand::execute(const std::string& input, Cli::Socket& socket)
 {
     socket.send_data(input + "\n");
