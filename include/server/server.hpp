@@ -29,6 +29,9 @@ public:
 
   const std::vector<User *> &get_users() const { return _users; }
   std::vector<User *> &get_users() { return _users; }
+
+  const std::vector<Team *> &get_teams() const { return _teams; }
+  std::vector<Team *> &get_teams() { return _teams; }
   
   std::unordered_map<int, std::string> &get_socket_to_name() { return _socket_to_name; }
   std::unordered_map<int, std::string> &get_socket_to_uuid() { return _socket_to_uuid; }

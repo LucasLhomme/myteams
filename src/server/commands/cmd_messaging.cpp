@@ -26,5 +26,5 @@ void CmdMessages::execute(Server &server, int client_socket, const std::vector<s
         server.send_response(client_socket, e.what());
         return;
     }
-    server.send_response(client_socket, "cmd_messages");
+    server.send_response(client_socket, "No message found.");
 }
