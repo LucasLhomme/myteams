@@ -29,7 +29,7 @@ void Server::GetUserInfo(int client_socket, const std::string &uuid_str) {
             return;
         }
     }
-    send_response(client_socket, "User not found");
+    send_response(client_socket, "ERROR_UNKNOWN_USER:" + uuid_str);
 }
 
 void Server::cmd_users(int client_socket, const std::vector<std::string> &args)
