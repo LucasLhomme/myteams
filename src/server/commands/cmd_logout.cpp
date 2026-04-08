@@ -26,11 +26,11 @@ void Server::cmd_logout(int client_socket, const std::vector<std::string> &args)
         break;
       }
     }
-
+    send_response(client_socket, "Logout success");
+    save_state();
     server_event_user_logged_out(uuid_str.c_str());
     _socket_to_uuid.erase(it);
     _socket_to_name.erase(client_socket);
   }
-  send_response(client_socket, "Logout success");
   remove_client(client_socket);
 }

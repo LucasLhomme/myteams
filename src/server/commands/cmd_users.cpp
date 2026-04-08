@@ -7,10 +7,25 @@
 
 #include "server/server.hpp"
 
+std::vector<std::string> Server::get_all_usernames() {
+    std::vector<std::string> usernames;
+    for (const auto& user : _users) {
+        usernames.push_back(user->username);
+    }
+    return usernames;
+}
+
 void Server::cmd_users(int client_socket, const std::vector<std::string> &args)
 {
     (void)args;
-    send_response(client_socket, "cmd_users");
+    std::vector<std::string> users_list = get_all_usernames();
+    std::string response;
+    for (const auto& name : users_list) {
+        response += name + "\n";
+    }
+    if (response.empty())
+        response = "No users found.";
+    send_response(client_socket, response);
 }
 
 void Server::cmd_user(int client_socket, const std::vector<std::string> &args)

@@ -53,14 +53,17 @@ private:
   std::vector<User *> _users;
   std::vector<Team *> _teams;
 
-  using CommandHandlerFn = void (Server::*)(int,
-                                            const std::vector<std::string> &);
-  std::unordered_map<std::string, CommandHandlerFn> _command_map;
+  using CommandHandler= void (Server::*)(int, const std::vector<std::string> &);
+  std::unordered_map<std::string, CommandHandler> _command_map;
 
   void init_commands();
   void cmd_login(int client_socket, const std::vector<std::string> &args);
   void cmd_logout(int client_socket, const std::vector<std::string> &args);
+
+
   void cmd_users(int client_socket, const std::vector<std::string> &args);
+  std::vector<std::string> get_all_usernames();
+  
   void cmd_user(int client_socket, const std::vector<std::string> &args);
   void cmd_send(int client_socket, const std::vector<std::string> &args);
   void cmd_messages(int client_socket, const std::vector<std::string> &args);
