@@ -22,7 +22,7 @@ CPPFLAGS    =   -Iinclude
 
 LIB_MYTEAMS_DIR = libs/myteams
 LDFLAGS    +=   -L$(LIB_MYTEAMS_DIR) -Wl,-rpath,$(abspath $(LIB_MYTEAMS_DIR))
-LDLIBS     +=   -lmyteams
+LDLIBS     +=   -lmyteams -luuid
 
 CXX         =   g++
 RM          =   rm -f

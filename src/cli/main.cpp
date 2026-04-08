@@ -51,6 +51,11 @@ int main(int ac, char **av)
     }
 
     Cli::Client client;
+    try {
     client.launch_client(av[1], av[2]);
+    } catch (const std::exception &e) {
+        std::cerr << "Error: " << e.what() << std::endl;
+        return 84;
+    }
     return 0;
 }
