@@ -29,13 +29,7 @@ void CmdLogout::execute(Server &server, int client_socket, const std::vector<std
         break;
       }
     }
-    
-    // IMPORTANT: Send user info BEFORE removing from maps
-    // Format: LOGOUT_DATA <uuid> <username>
-    // This way client receives the data with certainty before connection closes
     server.send_response(client_socket, "LOGOUT_DATA " + uuid_str + " " + username_str);
-    
-    // NOW we can clean up the connection data
     server.save_state();
     server_event_user_logged_out(uuid_str.c_str());
     server.get_socket_to_uuid().erase(it);
