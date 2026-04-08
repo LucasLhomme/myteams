@@ -7,6 +7,7 @@
 
 #include "./cli/socket.hpp"
 #include "exception.hpp"
+#include <sstream>
 
 namespace Cli {
     Socket::Socket() : _sockfd(-1)
@@ -61,6 +62,19 @@ namespace Cli {
         }
     }
 
+    static void remove_blank_lines(std::string &str)
+    {
+        std::istringstream iss(str);
+        std::string line;
+        std::string result;
+        while (std::getline(iss, line)) {
+            if (!line.empty()) {
+                result += line + "\n";
+            }
+        }
+        str = result;
+    }
+
     std::string Socket::receive_data(size_t max_size)
     {
         if (_sockfd < 0) return "";
@@ -70,6 +84,7 @@ namespace Cli {
             throw Exception("Failed to receive data");
         }
         buffer.resize(received);
+        remove_blank_lines(buffer);
         return buffer;
     }
 
