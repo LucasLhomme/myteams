@@ -20,6 +20,7 @@
 #include "./cli/commands/list.hpp"
 #include "./cli/commands/info.hpp"
 #include <iostream>
+#include <vector>
 
 CommandHandler::CommandHandler()
 {
@@ -53,12 +54,60 @@ void CommandHandler::execute_command(const std::string& command, const std::stri
     }
 }
 
+std::vector<std::string> split_args(const std::string& command) {
+    std::vector<std::string> args;
+    std::string current;
+    bool in_quotes = false;
+
+    for (char c : command) {
+        if (c == '"') {
+            in_quotes = !in_quotes;
+        } else if (c == ' ' && !in_quotes) {
+            if (!current.empty()) {
+                args.push_back(current);
+                current.clear();
+            }
+        } else {
+            current += c;
+        }
+    }
+    if (!current.empty())
+        args.push_back(current);
+    return args;
+}
+
+    std::string extract_command_name(const std::string& arg) {
+        if (!arg.empty() && arg[0] == '/')
+            return arg.substr(1);
+        return arg;
+    }
+
+    std::string recompose_args(const std::vector<std::string>& args) {
+        std::string recomposed;
+        for (size_t i = 0; i < args.size(); ++i) {
+            if (i > 0)
+                recomposed += " ";
+            if (args[i].find(' ') != std::string::npos)
+                recomposed += '"' + args[i] + '"';
+            else
+                recomposed += args[i];
+        }
+        return recomposed;
+    }
+
+
 void CommandHandler::process_command(const std::string& command, Cli::Socket& socket)
 {
-    for (const auto& [cmd_name, cmd_obj] : _commands) {
-        if (command.find(cmd_name) != std::string::npos) {
-            execute_command(cmd_name, command, socket);
-            break;
-        }
+    std::vector<std::string> args = split_args(command);
+    if (args.empty())
+        return;
+
+    std::string cmd_name = extract_command_name(args[0]);
+    auto it = _commands.find(cmd_name);
+    if (it != _commands.end()) {
+        std::string recomposed = recompose_args(args);
+        execute_command(cmd_name, recomposed, socket);
+    } else {
+        std::cout << "Unknown command" << std::endl;
     }
 }
