@@ -52,4 +52,5 @@ void Server::cmd_login(int client_socket, const std::vector<std::string> &args)
 
     server_event_user_logged_in(uuid_str);
     send_response(client_socket, "Login success: " + std::string(uuid_str));
+    save_state();
 }
