@@ -7,6 +7,7 @@
 
 #include "server/server.hpp"
 #include <regex>
+#include <iostream>
 
 void Server::init_commands()
 {
@@ -23,9 +24,17 @@ void Server::init_commands()
     _command_map["exit"] = &Server::cmd_logout;
 }
 
-void Server::process_command(int client_socket, const std::string &command)
-{
-    if (command.empty()) return;
+void Server::extract_and_process_commands(int client_socket) {
+  auto &buffer = _client_buffers[client_socket];
+  size_t pos;
+
+  while ((pos = buffer.find("\r\n")) != std::string::npos) {
+    std::string command = buffer.substr(0, pos);
+    buffer.erase(0, pos + 2);
+
+    while (!command.empty() && std::isspace(static_cast<unsigned char>(command.back())))
+      command.pop_back();
+    if (command.empty()) continue;
 
     std::vector<std::string> args;
     // this regex is for parsing arguments with quotes
@@ -34,20 +43,25 @@ void Server::process_command(int client_socket, const std::string &command)
     auto end = std::sregex_iterator();
 
     for (; it != end; ++it) {
-        std::string token = it->str();
-        if (token.size() >= 2 && token.front() == '"' && token.back() == '"') {
-            token = token.substr(1, token.size() - 2);
-        }
-        args.push_back(token);
+      std::string token = it->str();
+      if (token.size() >= 2 && token.front() == '"' && token.back() == '"')
+        token = token.substr(1, token.size() - 2);
+      args.push_back(token);
     }
-    if (args.empty())
-        return;
-    
-    std::string cmd_name = args[0];
-    auto map_it = _command_map.find(cmd_name);
+    if (args.empty()) continue;
+
+    //log
+    auto iterrator = _socket_to_name.find(client_socket);
+    if (iterrator != _socket_to_name.end())
+        std::cout << "User: " << iterrator->second << " send processing command " << args[0] << std::endl;
+    else
+        std::cout << "User: [unknown] send processing command " << args[0] << std::endl;    auto map_it = _command_map.find(args[0]);
+
     if (map_it != _command_map.end()) {
-        (this->*(map_it->second))(client_socket, args);
+      (this->*(map_it->second))(client_socket, args);
     } else {
-        send_response(client_socket, "Unknown command");
+      send_response(client_socket, "Unknown command");
     }
+  }
+    buffer.clear();
 }
