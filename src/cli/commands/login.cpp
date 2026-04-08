@@ -7,10 +7,26 @@
 
 #include "../../../include/cli/commands/login.hpp"
 #include <iostream>
+#include <sstream>
+
+extern "C" {
+#include "../../../libs/myteams/logging_client.h"
+}
 
 void LoginCommand::execute(const std::string& input, Cli::Socket& socket)
 {
     socket.send_data(input + "\n");
     std::string response = socket.receive_data();
+    
+    if (response.find("Login success:") == 0) {
+        std::string uuid = response.substr(14);
+        uuid.erase(uuid.find_last_not_of(" \n\r\t") + 1);
+        std::istringstream iss(input);
+        std::string cmd, username;
+        iss >> cmd >> username;
+        username.erase(0, username.find_first_not_of("\"")); 
+        username.erase(username.find_last_not_of("\"") + 1);
+        client_event_logged_in(uuid.c_str(), username.c_str());
+    }
     std::cout << response << std::endl;
 }
