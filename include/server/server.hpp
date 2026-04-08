@@ -32,9 +32,21 @@ public:
 
   const std::vector<Team *> &get_teams() const { return _teams; }
   std::vector<Team *> &get_teams() { return _teams; }
+
+  const std::vector<Channel *> &get_channels() const { return _channels; }
+  std::vector<Channel *> &get_channels() { return _channels; }
+
+  const std::vector<Thread *> &get_threads() const { return _threads; }
+  std::vector<Thread *> &get_threads() { return _threads; }
+
+  const std::vector<Reply *> &get_replies() const { return _replies; }
+  std::vector<Reply *> &get_replies() { return _replies; }
   
   std::unordered_map<int, std::string> &get_socket_to_name() { return _socket_to_name; }
   std::unordered_map<int, std::string> &get_socket_to_uuid() { return _socket_to_uuid; }
+  std::unordered_map<int, std::string> &get_use_team_context() { return _use_team_context; }
+  std::unordered_map<int, std::string> &get_use_channel_context() { return _use_channel_context; }
+  std::unordered_map<int, std::string> &get_use_thread_context() { return _use_thread_context; }
 
   void send_response(int client_socket, const std::string &message);
   void save_state();
@@ -50,10 +62,16 @@ private:
   std::unordered_map<int, std::string> _output_buffers;
   std::unordered_map<int, std::string> _socket_to_name;
   std::unordered_map<int, std::string> _socket_to_uuid;
+  std::unordered_map<int, std::string> _use_team_context;
+  std::unordered_map<int, std::string> _use_channel_context;
+  std::unordered_map<int, std::string> _use_thread_context;
 
   std::vector<User *> _users;
   std::vector<Team *> _teams;
-
+  std::vector<Channel *> _channels;
+  std::vector<Thread *> _threads;
+  std::vector<Reply *> _replies;
+  
   using CommandHandler= void (Server::*)(int, const std::vector<std::string> &);
   std::unordered_map<std::string, CommandHandler> _command_map;
   CommandFactory _command_factory;
