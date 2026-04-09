@@ -13,7 +13,7 @@ extern "C" {
 #include "../../../libs/myteams/logging_client.h"
 }
 
-void SubscribedCommand::execute(const std::string& input, Cli::Socket& socket)
+void SubscribedCommand::execute(const std::string& input, Cli::Socket& socket, Cli::Context& context)
 {
     socket.send_data(input + "\n");
     std::string response = socket.receive_data();
@@ -40,6 +40,4 @@ void SubscribedCommand::execute(const std::string& input, Cli::Socket& socket)
             }
         }
     }
-    
-    std::cout << response << std::endl;
 }

@@ -12,7 +12,7 @@
 
 class HelpCommand : public ICommand {
     public:
-        void execute(const std::string& input, Cli::Socket& socket) override;
+        void execute(const std::string& input, Cli::Socket& socket, Cli::Context& context) override;
         bool requiresAuth() const override { return false; }
         std::string getName() const override { return "help"; }
 };

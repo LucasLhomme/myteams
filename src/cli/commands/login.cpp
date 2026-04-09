@@ -13,7 +13,7 @@ extern "C" {
 #include "../../../libs/myteams/logging_client.h"
 }
 
-void LoginCommand::execute(const std::string& input, Cli::Socket& socket)
+void LoginCommand::execute(const std::string& input, Cli::Socket& socket, Cli::Context& context)
 {
     socket.send_data(input + "\n");
     std::string response = socket.receive_data();
@@ -24,9 +24,9 @@ void LoginCommand::execute(const std::string& input, Cli::Socket& socket)
         std::istringstream iss(input);
         std::string cmd, username;
         iss >> cmd >> username;
-        username.erase(0, username.find_first_not_of("\"")); 
+        username.erase(0, username.find_first_not_of("\""));
         username.erase(username.find_last_not_of("\"") + 1);
+        context.set_user(uuid, username);
         client_event_logged_in(uuid.c_str(), username.c_str());
     }
-    std::cout << response << std::endl;
 }

@@ -13,7 +13,7 @@ extern "C" {
 #include "../../../libs/myteams/logging_client.h"
 }
 
-void UserCommand::execute(const std::string& input, Cli::Socket& socket)
+void UserCommand::execute(const std::string& input, Cli::Socket& socket, Cli::Context& context)
 {
     socket.send_data(input + "\n");
     std::string response = socket.receive_data();
@@ -33,6 +33,4 @@ void UserCommand::execute(const std::string& input, Cli::Socket& socket)
         int status = (status_str == "1" || status_str == "online") ? 1 : 0;
         client_print_user(uuid.c_str(), name.c_str(), status);
     }
-
-    std::cout << response << std::endl;
 }

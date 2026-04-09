@@ -9,6 +9,7 @@
 #define TEAM_HPP_
 
 #include <uuid/uuid.h>
+#include <ctime>
 #include "constants.hpp"
 
 class ATeam {
@@ -39,12 +40,14 @@ struct Thread : public ATeam {
   uuid_t uuid;
   char thread_title[MAX_NAME_LENGTH];
   char thread_message[MAX_DESCRIPTION_LENGTH];
+  time_t timestamp;
 };
 
 struct Reply : public ATeam {
   uuid_t thread_uuid;
   uuid_t uuid;
   char reply_message[MAX_DESCRIPTION_LENGTH];
+  time_t timestamp;
 };
 
 #endif /* !TEAM_HPP_ */

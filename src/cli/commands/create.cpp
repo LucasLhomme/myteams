@@ -8,12 +8,13 @@
 #include "../../../include/cli/commands/create.hpp"
 #include <iostream>
 #include <sstream>
+#include <ctime>
 
 extern "C" {
 #include "../../../libs/myteams/logging_client.h"
 }
 
-void CreateCommand::execute(const std::string& input, Cli::Socket& socket)
+void CreateCommand::execute(const std::string& input, Cli::Socket& socket, Cli::Context& context)
 {
     socket.send_data(input + "\n");
     std::string response = socket.receive_data();
@@ -35,24 +36,52 @@ void CreateCommand::execute(const std::string& input, Cli::Socket& socket)
     } else if (response.find("ERROR") != std::string::npos) {
         client_error_unauthorized();
     } else {
+        std::istringstream iss(input);
+        std::string cmd, arg1, arg2;
+        iss >> cmd >> arg1 >> arg2;
+        if (!arg1.empty() && arg1[0] == '"') arg1.erase(0, 1);
+        if (!arg1.empty() && arg1[arg1.length()-1] == '"') arg1.erase(arg1.length()-1);
+        if (!arg2.empty() && arg2[0] == '"') arg2.erase(0, 1);
+        if (!arg2.empty() && arg2[arg2.length()-1] == '"') arg2.erase(arg2.length()-1);
+        
         if (response.find("Team created") != std::string::npos) {
             size_t pos = response.find(": ") + 2;
             std::string uuid = response.substr(pos);
             uuid.erase(uuid.find_last_not_of(" \n\r\t") + 1);
+            client_print_team_created(uuid.c_str(), arg1.c_str(), arg2.c_str());
         } else if (response.find("Channel created") != std::string::npos) {
             size_t pos = response.find(": ") + 2;
             std::string uuid = response.substr(pos);
             uuid.erase(uuid.find_last_not_of(" \n\r\t") + 1);
-            //client_print_channel_created(uuid.c_str(), name.c_str(), desc.c_str());
+            client_print_channel_created(uuid.c_str(), arg1.c_str(), arg2.c_str());
         } else if (response.find("Thread created") != std::string::npos) {
             size_t pos = response.find(": ") + 2;
-            std::string uuid = response.substr(pos);
-            uuid.erase(uuid.find_last_not_of(" \n\r\t") + 1);
-            //client_print_thread_created(uuid.c_str(), user_uuid.c_str(), timestamp, title.c_str(), body.c_str());
+            std::string rest = response.substr(pos);
+            std::istringstream data_stream(rest);
+            std::string thread_uuid, user_uuid, timestamp_str;
+            data_stream >> thread_uuid >> user_uuid >> timestamp_str;
+            
+            if (!thread_uuid.empty() && !user_uuid.empty() && !timestamp_str.empty()) {
+                time_t timestamp = std::stol(timestamp_str);
+                client_print_thread_created(thread_uuid.c_str(), user_uuid.c_str(), 
+                    timestamp, arg1.c_str(), arg2.c_str());
+            }
         } else if (response.find("Reply created") != std::string::npos) {
-            //client_print_reply_created(thread_uuid.c_str(), user_uuid.c_str(), timestamp, body.c_str());
+            size_t pos = response.find(": ") + 2;
+            std::string rest = response.substr(pos);
+            std::istringstream data_stream(rest);
+            std::string reply_uuid, user_uuid, timestamp_str;
+            data_stream >> reply_uuid >> user_uuid >> timestamp_str;
+            
+            if (!reply_uuid.empty() && !user_uuid.empty() && !timestamp_str.empty()) {
+                time_t timestamp = std::stol(timestamp_str);
+                std::string thread_uuid = context.get_thread_uuid();
+                
+                if (!thread_uuid.empty()) {
+                    client_print_reply_created(thread_uuid.c_str(), user_uuid.c_str(), 
+                        timestamp, arg1.c_str());
+                }
+            }
         }
     }
-    
-    std::cout << response << std::endl;
 }

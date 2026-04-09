@@ -13,7 +13,7 @@ extern "C" {
 #include "../../../libs/myteams/logging_client.h"
 }
 
-void LogoutCommand::execute(const std::string& input, Cli::Socket& socket)
+void LogoutCommand::execute(const std::string& input, Cli::Socket& socket, Cli::Context& context)
 {
     socket.send_data(input + "\n");
     std::string response = socket.receive_data();
@@ -24,13 +24,11 @@ void LogoutCommand::execute(const std::string& input, Cli::Socket& socket)
         iss >> uuid >> username;
         
         if (!uuid.empty() && !username.empty()) {
+            context.reset();
             client_event_logged_out(uuid.c_str(), username.c_str());
-            std::cout << "Logged out successfully" << std::endl;
             return;
         }
     } else if (response.find("Error") != std::string::npos) {
         client_error_unauthorized();
     }
-    
-    std::cout << response << std::endl;
 }

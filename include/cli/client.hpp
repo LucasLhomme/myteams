@@ -9,6 +9,7 @@
 #define CLIENT_HPP_
 
 #include "../../libs/myteams/logging_client.h"
+#include "./context.hpp"
 #include <string>
 
 namespace IClient {
@@ -26,6 +27,7 @@ namespace Cli {
     class Client final : public IClient::IClient {
         private:
             bool _client_status = false;
+            Context _context;
 
         public:
             ~Client() override = default;
@@ -34,6 +36,9 @@ namespace Cli {
             void SetClientStatus(bool status) override { _client_status = status; }
             bool is_auth() const override { return _client_status; }
             void launch_client(std::string ip, std::string port) override;
+
+            Context& get_context() { return _context; }
+            const Context& get_context() const { return _context; }
 
 
             // ECAPSULED FUNCTIONS

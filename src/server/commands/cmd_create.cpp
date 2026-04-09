@@ -10,6 +10,8 @@
 #include "server/team.hpp"
 #include <cstring>
 #include <uuid/uuid.h>
+#include <ctime>
+#include <iostream>
 
 extern "C" {
     #include "../../../libs/myteams/logging_server.h"
@@ -97,6 +99,7 @@ static void create_thread(Server &server, int client_socket, const std::vector<s
         return;
     }
     uuid_generate(thread->uuid);
+    thread->timestamp = time(nullptr);
     std::strncpy(thread->thread_title, args[1].c_str(), MAX_NAME_LENGTH);
     std::strncpy(thread->thread_message, args[2].c_str(), MAX_DESCRIPTION_LENGTH);
     thread->thread_title[MAX_NAME_LENGTH - 1] = '\0';
@@ -107,7 +110,8 @@ static void create_thread(Server &server, int client_socket, const std::vector<s
     std::string user_uuid = get_user_uuid(server, client_socket);
     server_event_thread_created(channel_uuid_str.c_str(), thread_uuid, user_uuid.c_str(),
         thread->thread_title, thread->thread_message);
-    server.send_response(client_socket, "Thread created with UUID: " + std::string(thread_uuid));
+    server.send_response(client_socket, "Thread created with UUID: " + std::string(thread_uuid) + 
+        " " + user_uuid + " " + std::to_string(thread->timestamp));
 }
 
 static void create_reply(Server &server, int client_socket, const std::vector<std::string> &args,
@@ -120,6 +124,7 @@ static void create_reply(Server &server, int client_socket, const std::vector<st
         return;
     }
     uuid_generate(reply->uuid);
+    reply->timestamp = time(nullptr);
     std::strncpy(reply->reply_message, args[1].c_str(), MAX_DESCRIPTION_LENGTH);
     reply->reply_message[MAX_DESCRIPTION_LENGTH - 1] = '\0';
     server.get_replies().push_back(reply);
@@ -128,7 +133,8 @@ static void create_reply(Server &server, int client_socket, const std::vector<st
     uuid_unparse(reply->uuid, reply_uuid);
     std::string user_uuid = get_user_uuid(server, client_socket);
     server_event_reply_created(thread_uuid_str.c_str(), user_uuid.c_str(), args[1].c_str());
-    server.send_response(client_socket, "Reply created");
+    server.send_response(client_socket, "Reply created with UUID: " + std::string(reply_uuid) + 
+        " " + user_uuid + " " + std::to_string(reply->timestamp));
 }
 
 void CmdCreate::execute(Server &server, int client_socket, const std::vector<std::string> &args)

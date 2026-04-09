@@ -13,7 +13,7 @@ extern "C" {
 #include "../../../libs/myteams/logging_client.h"
 }
 
-void SendCommand::execute(const std::string& input, Cli::Socket& socket)
+void SendCommand::execute(const std::string& input, Cli::Socket& socket, Cli::Context& context)
 {
     socket.send_data(input + "\n");
     std::string response = socket.receive_data();
@@ -29,6 +29,4 @@ void SendCommand::execute(const std::string& input, Cli::Socket& socket)
         client_error_unauthorized();
         return;
     }
-    
-    std::cout << response << std::endl;
 }

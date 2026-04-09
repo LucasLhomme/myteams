@@ -13,7 +13,7 @@ extern "C" {
 #include "../../../libs/myteams/logging_client.h"
 }
 
-void MessagesCommand::execute(const std::string& input, Cli::Socket& socket)
+void MessagesCommand::execute(const std::string& input, Cli::Socket& socket, Cli::Context& context)
 {
     socket.send_data(input + "\n");
     std::string response = socket.receive_data();
@@ -41,6 +41,4 @@ void MessagesCommand::execute(const std::string& input, Cli::Socket& socket)
             client_private_message_print_messages(sender_uuid.c_str(), timestamp, message.c_str());
         }
     }
-    
-    std::cout << response << std::endl;
 }

@@ -7,12 +7,13 @@
 
 #include "../../../include/cli/commands/use.hpp"
 #include <iostream>
+#include <sstream>
 
 extern "C" {
 #include "../../../libs/myteams/logging_client.h"
 }
 
-void UseCommand::execute(const std::string& input, Cli::Socket& socket)
+void UseCommand::execute(const std::string& input, Cli::Socket& socket, Cli::Context& context)
 {
     socket.send_data(input + "\n");
     std::string response = socket.receive_data();
@@ -31,7 +32,14 @@ void UseCommand::execute(const std::string& input, Cli::Socket& socket)
         client_error_unknown_thread(uuid.c_str());
     } else if (response.find("ERROR") != std::string::npos) {
         client_error_unauthorized();
+    } else {
+        std::istringstream iss(input);
+        std::string cmd, team_uuid, channel_uuid, thread_uuid;
+        iss >> cmd >> team_uuid >> channel_uuid >> thread_uuid;
+        
+        if (!team_uuid.empty()) context.set_team(team_uuid);
+        if (!channel_uuid.empty()) context.set_channel(channel_uuid);
+        if (!thread_uuid.empty()) context.set_thread(thread_uuid);
+        std::cout << response << std::endl;
     }
-    
-    std::cout << response << std::endl;
 }

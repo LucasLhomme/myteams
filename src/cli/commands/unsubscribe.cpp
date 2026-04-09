@@ -12,7 +12,7 @@ extern "C" {
 #include "../../../libs/myteams/logging_client.h"
 }
 
-void UnsubscribeCommand::execute(const std::string& input, Cli::Socket& socket)
+void UnsubscribeCommand::execute(const std::string& input, Cli::Socket& socket, Cli::Context& context)
 {
     socket.send_data(input + "\n");
     std::string response = socket.receive_data();
@@ -24,6 +24,4 @@ void UnsubscribeCommand::execute(const std::string& input, Cli::Socket& socket)
     } else if (response.find("ERROR") != std::string::npos) {
         client_error_unauthorized();
     }
-    
-    std::cout << response << std::endl;
 }

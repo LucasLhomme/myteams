@@ -40,7 +40,7 @@ CommandHandler::CommandHandler()
     _commands["info"] = std::make_unique<InfoCommand>();
 }
 
-void CommandHandler::execute_command(const std::string& command, const std::string& input, Cli::Socket& socket)
+void CommandHandler::execute_command(const std::string& command, const std::string& input, Cli::Socket& socket, Cli::Context& context)
 {
     auto it = _commands.find(command);
     if (it != _commands.end()) {
@@ -48,7 +48,7 @@ void CommandHandler::execute_command(const std::string& command, const std::stri
         std::string input_with_crlf = input;
         if (input_with_crlf.size() < 2 || input_with_crlf.substr(input_with_crlf.size()-2) != "\r\n")
             input_with_crlf += "\r\n";
-        it->second->execute(input_with_crlf, socket);
+        it->second->execute(input_with_crlf, socket, context);
     } else {
         std::cout << "Unknown command" << std::endl;
     }
@@ -96,7 +96,7 @@ std::vector<std::string> split_args(const std::string& command) {
     }
 
 
-void CommandHandler::process_command(const std::string& command, Cli::Socket& socket)
+void CommandHandler::process_command(const std::string& command, Cli::Socket& socket, Cli::Context& context)
 {
     std::vector<std::string> args = split_args(command);
     if (args.empty())
@@ -106,7 +106,7 @@ void CommandHandler::process_command(const std::string& command, Cli::Socket& so
     auto it = _commands.find(cmd_name);
     if (it != _commands.end()) {
         std::string recomposed = recompose_args(args);
-        execute_command(cmd_name, recomposed, socket);
+        execute_command(cmd_name, recomposed, socket, context);
     } else {
         std::cout << "Unknown command" << std::endl;
     }
