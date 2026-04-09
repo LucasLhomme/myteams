@@ -64,6 +64,9 @@ void Server::remove_client(int client_socket) {
     _socket_to_uuid.erase(it_uuid);
   }
   _socket_to_name.erase(client_socket);
+  _use_team_context.erase(client_socket);
+  _use_channel_context.erase(client_socket);
+  _use_thread_context.erase(client_socket);
   ::close(client_socket);
   _client_buffers.erase(client_socket);
 

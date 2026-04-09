@@ -41,6 +41,14 @@ void Server::extract_and_process_commands(int client_socket) {
         std::cout << "User: " << iterrator->second << " send processing command " << args[0] << std::endl;
     else
         std::cout << "User: [unknown] send processing command " << args[0] << std::endl;
+    
+    bool is_logged_in = (_socket_to_uuid.find(client_socket) != _socket_to_uuid.end());
+    bool is_allowed_command = (args[0] == "/login" || args[0] == "/help");
+    
+    if (!is_logged_in && !is_allowed_command) {
+        send_response(client_socket, "You must be logged in to use this command. Use /login or /help");
+        continue;
+    }
         
     auto map_it = _command_map.find(args[0]);
 

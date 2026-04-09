@@ -20,8 +20,8 @@ void CmdLogin::execute(Server &server, int client_socket, const std::vector<std:
     }
 
     std::string username = args[1];
-    if (username.length() > MAX_NAME_LENGTH) {
-        username = username.substr(0, MAX_NAME_LENGTH);
+    if (username.length() >= MAX_NAME_LENGTH) {
+        username = username.substr(0, MAX_NAME_LENGTH - 1);
     }
 
     User *user = nullptr;
@@ -36,6 +36,7 @@ void CmdLogin::execute(Server &server, int client_socket, const std::vector<std:
         user = new User;
         uuid_generate(user->uuid);
         std::strncpy(user->username, username.c_str(), MAX_NAME_LENGTH);
+            user->username[MAX_NAME_LENGTH - 1] = '\0';
         user->is_online = true;
         server.get_users().push_back(user);
         
