@@ -10,8 +10,8 @@ SRC_CLI     =   $(wildcard src/cli/*.cpp) $(wildcard src/cli/commands/*.cpp)
 
 SRC_TESTS   =   $(wildcard tests/*.cpp)
 
-OBJ_SERVER  =   $(SRC_COMMON:.cpp=.o) $(SRC_SERVER:.cpp=.o)
-OBJ_CLI     =   $(SRC_COMMON:.cpp=.o) $(SRC_CLI:.cpp=.o)
+OBJ_SERVER  =   $(SRC_SERVER:.cpp=.o)
+OBJ_CLI     =   $(SRC_CLI:.cpp=.o)
 
 NAME_SERVER =   myteams_server
 NAME_CLI    =   myteams_cli
@@ -47,7 +47,7 @@ re: fclean all
 
 tests_run:
 	@$(RM) *.gcda *.gcno 
-	$(CXX) -o $(TEST_NAME) $(SRC_COMMON) $(SRC_TESTS) $(SRC_SERVER) $(SRC_CLI) \
+	$(CXX) -o $(TEST_NAME) $(SRC_TESTS) $(SRC_SERVER) $(SRC_CLI) \
 		$(CXXFLAGS) -DUNIT_TEST --coverage -lcriterion $(LDFLAGS) $(LDLIBS)
 	./$(TEST_NAME)
 	gcovr --exclude tests/
