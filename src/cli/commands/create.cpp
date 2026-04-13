@@ -49,11 +49,13 @@ void CreateCommand::execute(const std::string& input, Cli::Socket& socket, Cli::
             std::string uuid = response.substr(pos);
             uuid.erase(uuid.find_last_not_of(" \n\r\t") + 1);
             client_print_team_created(uuid.c_str(), arg1.c_str(), arg2.c_str());
+            client_event_team_created(uuid.c_str(), arg1.c_str(), arg2.c_str());
         } else if (response.find("Channel created") != std::string::npos) {
             size_t pos = response.find(": ") + 2;
             std::string uuid = response.substr(pos);
             uuid.erase(uuid.find_last_not_of(" \n\r\t") + 1);
             client_print_channel_created(uuid.c_str(), arg1.c_str(), arg2.c_str());
+            client_event_channel_created(uuid.c_str(), arg1.c_str(), arg2.c_str());
         } else if (response.find("Thread created") != std::string::npos) {
             size_t pos = response.find(": ") + 2;
             std::string rest = response.substr(pos);
@@ -76,10 +78,15 @@ void CreateCommand::execute(const std::string& input, Cli::Socket& socket, Cli::
             if (!reply_uuid.empty() && !user_uuid.empty() && !timestamp_str.empty()) {
                 time_t timestamp = std::stol(timestamp_str);
                 std::string thread_uuid = context.get_thread_uuid();
+                std::string team_uuid = context.get_team_uuid();
                 
                 if (!thread_uuid.empty()) {
                     client_print_reply_created(thread_uuid.c_str(), user_uuid.c_str(), 
                         timestamp, arg1.c_str());
+                    if (!team_uuid.empty()) {
+                        client_event_thread_reply_received(team_uuid.c_str(), thread_uuid.c_str(),
+                            user_uuid.c_str(), arg1.c_str());
+                    }
                 }
             }
         }
