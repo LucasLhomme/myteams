@@ -50,4 +50,11 @@ struct Reply : public ATeam {
   time_t timestamp;
 };
 
+struct PrivateMessage {
+  uuid_t sender_uuid;
+  uuid_t receiver_uuid;
+  char body[MAX_BODY_LENGTH];
+  time_t timestamp;
+};
+
 #endif /* !TEAM_HPP_ */

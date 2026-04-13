@@ -7,6 +7,9 @@
 
 #include "server/commands/cmd_send.hpp"
 #include "server/server.hpp"
+#include "server/team.hpp"
+#include <cstring>
+#include <ctime>
 #include <stdexcept>
 #include <uuid/uuid.h>
 
@@ -31,14 +34,14 @@ void CmdSend::execute(Server &server, int client_socket, const std::vector<std::
     std::string sender_name = "Unknown";
     auto &socket_to_uuid = server.get_socket_to_uuid();
     auto it = socket_to_uuid.find(client_socket);
-    if (it != socket_to_uuid.end()) {
+    if (it != socket_to_uuid.end())
         sender_uuid = it->second;
-    }
+
     auto &socket_to_name = server.get_socket_to_name();
     auto name_it = socket_to_name.find(client_socket);
-    if (name_it != socket_to_name.end()) {
+    if (name_it != socket_to_name.end())
         sender_name = name_it->second;
-    }
+
     int reciver_socket = -1;
     for (const auto &pair : socket_to_uuid) {
         if (pair.second == args[1]) {
@@ -54,13 +57,20 @@ void CmdSend::execute(Server &server, int client_socket, const std::vector<std::
         return;
     }
     std::string message = args[2];
-    for (size_t i = 3; i < args.size(); ++i) {
-        message += " " + args[i];
-    }
-
+    for (size_t j = 3; j < args.size(); j++)
+        message += " " + args[j];
+    PrivateMessage *pm = new PrivateMessage;
+    memset(pm, 0, sizeof(*pm));
+    uuid_parse(sender_uuid.c_str(), pm->sender_uuid);
+    uuid_t receiver_uuid_t;
+    uuid_parse(args[1].c_str(), receiver_uuid_t);
+    uuid_copy(pm->receiver_uuid, receiver_uuid_t);
+    std::strncpy(pm->body, message.c_str(), MAX_BODY_LENGTH - 1);
+    pm->body[MAX_BODY_LENGTH - 1] = '\0';
+    pm->timestamp = time(nullptr);
+    server.get_private_messages().push_back(pm);
     server.send_response(reciver_socket, "Private message from " + sender_name + " (" + sender_uuid + "): " + message);
     server_event_private_message_sended(sender_uuid.c_str(), args[1].c_str(), message.c_str());
-    std::string response = "Message sent to " + args[1] + ": " + message;
-
-    server.send_response(client_socket, response);
+    server.send_response(client_socket, "Message sent to " + args[1] + ": " + message);
+    server.save_state();
 }
