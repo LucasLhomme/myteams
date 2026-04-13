@@ -6,44 +6,69 @@
 */
 
 #include "../../../include/cli/commands/info.hpp"
-#include <iostream>
 #include <sstream>
+#include <vector>
 
 extern "C" {
 #include "../../../libs/myteams/logging_client.h"
 }
 
+static std::vector<std::string> split_tab_fields(const std::string &line)
+{
+    std::vector<std::string> fields;
+    std::string field;
+    std::istringstream stream(line);
+
+    while (std::getline(stream, field, '\t')) {
+        fields.push_back(field);
+    }
+    return fields;
+}
+
 void InfoCommand::execute(const std::string& input, Cli::Socket& socket, Cli::Context& context)
 {
+    (void)context;
     socket.send_data(input + "\n");
     std::string response = socket.receive_data();
-    
+
     if (response.find("ERROR_UNKNOWN_TEAM:") == 0) {
-        std::string uuid = response.substr(18);
+        std::string uuid = response.substr(19);
         uuid.erase(uuid.find_last_not_of(" \n\r\t") + 1);
         client_error_unknown_team(uuid.c_str());
-    } else if (response.find("ERROR_UNKNOWN_CHANNEL:") == 0) {
-        std::string uuid = response.substr(21);
+        return;
+    }
+    if (response.find("ERROR_UNKNOWN_CHANNEL:") == 0) {
+        std::string uuid = response.substr(22);
         uuid.erase(uuid.find_last_not_of(" \n\r\t") + 1);
         client_error_unknown_channel(uuid.c_str());
-    } else if (response.find("ERROR_UNKNOWN_THREAD:") == 0) {
-        std::string uuid = response.substr(20);
+        return;
+    }
+    if (response.find("ERROR_UNKNOWN_THREAD:") == 0) {
+        std::string uuid = response.substr(21);
         uuid.erase(uuid.find_last_not_of(" \n\r\t") + 1);
         client_error_unknown_thread(uuid.c_str());
-    } else if (response.find("ERROR") != std::string::npos) {
+        return;
+    }
+    if (response.find("ERROR") != std::string::npos) {
         client_error_unauthorized();
-    } else {
-        if (response.find("USER") != std::string::npos) {
-            std::istringstream iss(response);
-            std::string type, uuid, name, status_str;
-            iss >> type >> uuid >> name >> status_str;
-            int status = (status_str == "1") ? 1 : 0;
-        } else if (response.find("TEAM") != std::string::npos) {
-            //client_print_team(uuid.c_str(), name.c_str(), desc.c_str());
-        } else if (response.find("CHANNEL") != std::string::npos) {
-            //client_print_channel(uuid.c_str(), name.c_str(), desc.c_str());
-        } else if (response.find("THREAD") != std::string::npos) {
-            //client_print_thread(uuid.c_str(), user_uuid.c_str(), timestamp, title.c_str(), body.c_str());
-        }
+        return;
+    }
+
+    const std::vector<std::string> fields = split_tab_fields(response);
+    if (fields.empty()) {
+        return;
+    }
+
+    if (fields[0] == "USER" && fields.size() >= 4) {
+        const int status = (fields[3] == "1" || fields[3] == "online") ? 1 : 0;
+        client_print_user(fields[1].c_str(), fields[2].c_str(), status);
+    } else if (fields[0] == "TEAM" && fields.size() >= 4) {
+        client_print_team(fields[1].c_str(), fields[2].c_str(), fields[3].c_str());
+    } else if (fields[0] == "CHANNEL" && fields.size() >= 4) {
+        client_print_channel(fields[1].c_str(), fields[2].c_str(), fields[3].c_str());
+    } else if (fields[0] == "THREAD" && fields.size() >= 6) {
+        const time_t timestamp = static_cast<time_t>(std::stoll(fields[3]));
+        client_print_thread(fields[1].c_str(), fields[2].c_str(), timestamp,
+            fields[4].c_str(), fields[5].c_str());
     }
 }

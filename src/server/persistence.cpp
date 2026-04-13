@@ -60,7 +60,9 @@ void Server::save_state() {
     uuid_unparse(thread->uuid, thread_uuid);
     uuid_unparse(thread->team_uuid, team_uuid);
     uuid_unparse(thread->channel_uuid, channel_uuid);
-    file << "THREAD " << team_uuid << " " << channel_uuid << " " << thread_uuid << " " << thread->thread_title << " \"" << thread->thread_message << "\"" << std::endl;
+        file << "THREAD " << team_uuid << " " << channel_uuid << " " << thread_uuid << " "
+          << thread->creator_uuid << " " << thread->thread_title << " \""
+          << thread->thread_message << "\"" << std::endl;
   }
 
   for (const auto &reply : _replies) {
@@ -71,7 +73,8 @@ void Server::save_state() {
     char thread_uuid[MAX_UUID_LENGTH];
     uuid_unparse(reply->uuid, reply_uuid);
     uuid_unparse(reply->thread_uuid, thread_uuid);
-    file << "REPLY " << thread_uuid << " " << reply_uuid << " \"" << reply->reply_message << "\"" << std::endl;
+        file << "REPLY " << thread_uuid << " " << reply->creator_uuid << " "
+          << reply_uuid << " \"" << reply->reply_message << "\"" << std::endl;
   }
 
   file.close();
