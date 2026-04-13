@@ -62,6 +62,12 @@ public:
     const std::vector<Reply *> &get_replies() const { return _replies; }
     std::vector<Reply *> &get_replies() { return _replies; }
 
+    const std::vector<PrivateMessage *> &get_private_messages() const
+    {
+      return _private_messages;
+    }
+    std::vector<PrivateMessage *> &get_private_messages() { return _private_messages; }
+
     // Client context accessors
     std::unordered_map<int, std::string> &get_socket_to_name() { return _socket_to_name; }
     std::unordered_map<int, std::string> &get_socket_to_uuid() { return _socket_to_uuid; }
@@ -174,6 +180,7 @@ private:
     std::vector<Channel *> _channels;
     std::vector<Thread *> _threads;
     std::vector<Reply *> _replies;
+    std::vector<PrivateMessage *> _private_messages;
 
     //  Command Handling 
     using CommandHandler = void (Server::*)(int, const std::vector<std::string> &);

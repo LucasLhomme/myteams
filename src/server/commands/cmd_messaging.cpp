@@ -50,9 +50,9 @@ void CmdMessages::execute(Server &server, int client_socket, const std::vector<s
         if (!pm)
             continue;
         bool sent_by_me = (uuid_compare(pm->sender_uuid,   my_uuid_t)    == 0 &&
-                           uuid_compare(pm->receiver_uuid, other_uuid_t) == 0);
+                        uuid_compare(pm->receiver_uuid, other_uuid_t) == 0);
         bool sent_to_me = (uuid_compare(pm->sender_uuid,   other_uuid_t) == 0 &&
-                           uuid_compare(pm->receiver_uuid, my_uuid_t)    == 0);
+                        uuid_compare(pm->receiver_uuid, my_uuid_t)    == 0);
         if (!sent_by_me && !sent_to_me)
             continue;
 
