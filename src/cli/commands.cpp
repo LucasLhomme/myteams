@@ -44,7 +44,6 @@ void CommandHandler::execute_command(const std::string& command, const std::stri
 {
     auto it = _commands.find(command);
     if (it != _commands.end()) {
-        // Ajout d'un \r\n à la fin de la commande pour le protocole
         std::string input_with_crlf = input;
         if (input_with_crlf.size() < 2 || input_with_crlf.substr(input_with_crlf.size()-2) != "\r\n")
             input_with_crlf += "\r\n";

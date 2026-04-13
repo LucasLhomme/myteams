@@ -11,7 +11,6 @@
 #include <vector>
 #include <string>
 
-// Forward declaration to avoid circular dependencies
 class Server;
 
 class ICommand {

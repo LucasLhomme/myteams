@@ -15,6 +15,7 @@ extern "C" {
 
 void SendCommand::execute(const std::string& input, Cli::Socket& socket, Cli::Context& context)
 {
+    (void)context;
     socket.send_data(input + "\n");
     std::string response = socket.receive_data();
     
@@ -28,5 +29,8 @@ void SendCommand::execute(const std::string& input, Cli::Socket& socket, Cli::Co
     if (response.find("ERROR") != std::string::npos) {
         client_error_unauthorized();
         return;
+    }
+    if (response.find("Message sent to") == 0) {
+        std::cout << response << std::endl;
     }
 }

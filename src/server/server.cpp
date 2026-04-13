@@ -2,7 +2,7 @@
 ** EPITECH PROJECT, 2026
 ** my_teams
 ** File description:
-** server core
+** server core with poll-based multi-client I/O management
 */
 
 #include "server/server.hpp"
@@ -20,63 +20,93 @@ extern "C" {
 
 extern bool server_running;
 
-Server::Server(int port) : _port(port) {
-  load_state();
-  _pollfds.push_back(make_pollfd(STDIN_FILENO));
-}
-Server::~Server() { 
-    cleanup(); 
-}
-
-void Server::accept_client() {
-  sockaddr_in client_addr{};
-  socklen_t client_len = sizeof(client_addr);
-
-  int client_socket = ::accept(
-      _server_socket, reinterpret_cast<sockaddr *>(&client_addr), &client_len);
-  if (client_socket != -1) {
-    _pollfds.push_back(make_pollfd(client_socket));
-    _client_buffers[client_socket] = "";
-    _output_buffers[client_socket] = "";
-    std::cout << "New client connected on socket " << client_socket << std::endl;
-  }
+/**
+ * @brief Construct Server with given port
+ * @param port Port to listen on
+ */
+Server::Server(int port) : _port(port)
+{
+    load_state();
+    _pollfds.push_back(make_pollfd(STDIN_FILENO));
 }
 
-void Server::send_response(int client_socket, const std::string &message) {
-  std::string msg_to_send = message;
-  if (msg_to_send.size() < 2 ||
-      msg_to_send.substr(msg_to_send.size() - 2) != "\r\n") {
-    msg_to_send += "\r\n";
-  }
-  _output_buffers[client_socket] += msg_to_send;
-  for (auto &pfd : _pollfds) {
-    if (pfd.fd == client_socket) {
-      pfd.events |= POLLOUT;
-      break;
+/**
+ * @brief Destructor - cleanup all resources
+ */
+Server::~Server()
+{
+    cleanup();
+}
+
+/**
+ * @brief Accept incoming client connection
+ */
+void Server::accept_client()
+{
+    sockaddr_in client_addr{};
+    socklen_t client_len = sizeof(client_addr);
+
+    int client_socket = ::accept(
+        _server_socket, reinterpret_cast<sockaddr *>(&client_addr), &client_len);
+    
+    if (client_socket != -1) {
+        _pollfds.push_back(make_pollfd(client_socket));
+        _client_buffers[client_socket] = "";
+        _output_buffers[client_socket] = "";
+        std::cout << "New client connected on socket " << client_socket << std::endl;
     }
-  }
 }
 
-void Server::remove_client(int client_socket) {
-  auto it_uuid = _socket_to_uuid.find(client_socket);
-  if (it_uuid != _socket_to_uuid.end()) {
-    server_event_user_logged_out(it_uuid->second.c_str());
-    _socket_to_uuid.erase(it_uuid);
-  }
-  _socket_to_name.erase(client_socket);
-  _use_team_context.erase(client_socket);
-  _use_channel_context.erase(client_socket);
-  _use_thread_context.erase(client_socket);
-  ::close(client_socket);
-  _client_buffers.erase(client_socket);
-
-  for (auto it = _pollfds.begin(); it != _pollfds.end(); ++it) {
-    if (it->fd == client_socket) {
-      _pollfds.erase(it);
-      break;
+/**
+ * @brief Send response to client (queues data for sending)
+ * @param client_socket Socket to send to
+ * @param message Message to send
+ */
+void Server::send_response(int client_socket, const std::string &message)
+{
+    std::string msg_to_send = message;
+    if (msg_to_send.size() < 2 ||
+        msg_to_send.substr(msg_to_send.size() - 2) != "\r\n") {
+        msg_to_send += "\r\n";
     }
-  }
-  std::cout << "Client " << client_socket << " disconnected" << std::endl;
+    _output_buffers[client_socket] += msg_to_send;
+    
+    for (auto &pfd : _pollfds) {
+        if (pfd.fd == client_socket) {
+            pfd.events |= POLLOUT;
+            break;
+        }
+    }
+}
+
+/**
+ * @brief Remove client from all tracking structures
+ * @param client_socket Socket to remove
+ */
+void Server::remove_client(int client_socket)
+{
+    auto it_uuid = _socket_to_uuid.find(client_socket);
+    if (it_uuid != _socket_to_uuid.end()) {
+        server_event_user_logged_out(it_uuid->second.c_str());
+        _socket_to_uuid.erase(it_uuid);
+    }
+    
+    _socket_to_name.erase(client_socket);
+    _use_team_context.erase(client_socket);
+    _use_channel_context.erase(client_socket);
+    _use_thread_context.erase(client_socket);
+    _output_buffers.erase(client_socket);
+    
+    ::close(client_socket);
+    _client_buffers.erase(client_socket);
+
+    for (auto it = _pollfds.begin(); it != _pollfds.end(); ++it) {
+        if (it->fd == client_socket) {
+            _pollfds.erase(it);
+            break;
+        }
+    }
+    std::cout << "Client " << client_socket << " disconnected" << std::endl;
 }
 
 bool Server::handle_writable(size_t index) {
