@@ -9,6 +9,11 @@
 #include <regex>
 #include <iostream>
 
+static bool is_public_command(const std::string &command)
+{
+  return command == "/login" || command == "/help";
+}
+
 void Server::extract_and_process_commands(int client_socket) {
   auto &buffer = _client_buffers[client_socket];
   size_t pos;
@@ -42,10 +47,9 @@ void Server::extract_and_process_commands(int client_socket) {
     else
         std::cout << "User: [unknown] send processing command " << args[0] << std::endl;
     
-    bool is_logged_in = (_socket_to_uuid.find(client_socket) != _socket_to_uuid.end());
-    bool is_allowed_command = (args[0] == "/login" || args[0] == "/help");
-    
-    if (!is_logged_in && !is_allowed_command) {
+    const bool is_logged_in = (_socket_to_uuid.find(client_socket) != _socket_to_uuid.end());
+
+    if (!is_logged_in && !is_public_command(args[0])) {
         send_response(client_socket, "You must be logged in to use this command. Use /login or /help");
         continue;
     }

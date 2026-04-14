@@ -20,7 +20,8 @@ void LoginCommand::execute(const std::string& input, Cli::Socket& socket, Cli::C
     
     if (response.find("Login success:") == 0) {
         std::string uuid = response.substr(14);
-        uuid.erase(uuid.find_last_not_of(" \n\r\t") + 1);
+        uuid.erase(0, uuid.find_first_not_of(" \n\r\t"));
+        uuid.erase(uuid.find_last_not_of("\n\r\t") + 1);
         std::istringstream iss(input);
         std::string cmd, username;
         iss >> cmd >> username;

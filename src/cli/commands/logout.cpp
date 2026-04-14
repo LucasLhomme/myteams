@@ -18,8 +18,9 @@ void LogoutCommand::execute(const std::string& input, Cli::Socket& socket, Cli::
     socket.send_data(input + "\n");
     std::string response = socket.receive_data();
     
-    if (response.find("LOGOUT_DATA ") == 0) {
-        std::istringstream iss(response.substr(12));
+    if (response.find("USER_LOGGED_OUT ") == 0 || response.find("LOGOUT_DATA ") == 0) {
+        const size_t payload_start = response.find(' ') + 1;
+        std::istringstream iss(response.substr(payload_start));
         std::string uuid, username;
         iss >> uuid >> username;
         

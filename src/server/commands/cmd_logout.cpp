@@ -17,7 +17,6 @@ void CmdLogout::execute(Server &server, int client_socket, const std::vector<std
     auto it = server.get_socket_to_uuid().find(client_socket);
     std::string uuid_str = "";
     std::string username_str = "";
-    bool found = false;
 
     if (it != server.get_socket_to_uuid().end()) {
         uuid_str = it->second;
@@ -27,7 +26,6 @@ void CmdLogout::execute(Server &server, int client_socket, const std::vector<std
             if (std::string(u_str) == uuid_str) {
                 username_str = user->username;
                 user->is_online = false;
-                found = true;
                 break;
             }
         }
@@ -35,6 +33,9 @@ void CmdLogout::execute(Server &server, int client_socket, const std::vector<std
         server.save_state();
         server.get_socket_to_uuid().erase(it);
         server.get_socket_to_name().erase(client_socket);
+        server.get_use_team_context().erase(client_socket);
+        server.get_use_channel_context().erase(client_socket);
+        server.get_use_thread_context().erase(client_socket);
     }
     if (!uuid_str.empty()) {
         server.send_response(client_socket, "USER_LOGGED_OUT " + uuid_str + " " + username_str);
