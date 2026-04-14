@@ -19,35 +19,45 @@ extern "C" {
 //fonction qui escape les caracteres speciaux du json
 static std::string json_escape(const std::string &s)
 {
-    std::string out;
+    try {
+        std::string out;
 
-    out.reserve(s.size() + 8);
-    for (unsigned char c : s) {
-        switch (c) {
-            case '"':  out += "\\\"";
-                break;
-            case '\\': out += "\\\\";
-                break;
-            case '\n': out += "\\n";
-                break;
-            case '\r': out += "\\r";
-                break;
-            case '\t': out += "\\t";
-                break;
-            default:   out += c;
-                break;
+        out.reserve(s.size() + 8);
+        for (unsigned char c : s) {
+            switch (c) {
+                case '"':  out += "\\\"";
+                    break;
+                case '\\': out += "\\\\";
+                    break;
+                case '\n': out += "\\n";
+                    break;
+                case '\r': out += "\\r";
+                    break;
+                case '\t': out += "\\t";
+                    break;
+                default:   out += c;
+                    break;
+            }
         }
+        return out;
+    } catch (const std::exception &e) {
+        std::cout << "[ERROR] json_escape: " << e.what() << std::endl;
+        return s;
     }
-    return out;
 }
 
 //fonction qui convertit un uuid en string
 static std::string uuid_to_str(const uuid_t u)
 {
-    char buf[MAX_UUID_LENGTH];
+    try {
+        char buf[MAX_UUID_LENGTH];
 
-    uuid_unparse(u, buf);
-    return std::string(buf);
+        uuid_unparse(u, buf);
+        return std::string(buf);
+    } catch (const std::exception &e) {
+        std::cout << "[ERROR] uuid_to_str: " << e.what() << std::endl;
+        return "";
+    }
 }
 
 
@@ -73,59 +83,63 @@ static void save_array(std::ofstream &f, const std::string &name, const std::vec
 
 void Server::save_state()
 {
-    std::ofstream file("server_save.json");
-    if (!file.is_open()) {
-        std::cout << "[ERROR] Cannot open server_save.json for writing" << std::endl;
-        return;
+    try {
+        std::ofstream file("server_save.json");
+        if (!file.is_open()) {
+            std::cout << "[ERROR] Cannot open server_save.json for writing" << std::endl;
+            return;
+        }
+
+        file << "{\n";
+
+        save_array(file, "users", _users, [](std::ofstream &f, const User *u) {
+            f << "      \"uuid\": \"" << json_escape(uuid_to_str(u->uuid)) << "\",\n"
+              << "      \"username\": \"" << json_escape(u->username) << "\",\n"
+              << "      \"is_online\": " << (u->is_online ? "true" : "false");
+        });
+
+        save_array(file, "teams", _teams, [](std::ofstream &f, const Team *t) {
+            f << "      \"uuid\": \"" << json_escape(uuid_to_str(t->uuid)) << "\",\n"
+              << "      \"name\": \"" << json_escape(t->name) << "\",\n"
+              << "      \"description\": \"" << json_escape(t->description) << "\"";
+        });
+
+        save_array(file, "channels", _channels, [](std::ofstream &f, const Channel *c) {
+            f << "      \"team_uuid\": \"" << json_escape(uuid_to_str(c->team_uuid)) << "\",\n"
+              << "      \"uuid\": \"" << json_escape(uuid_to_str(c->uuid)) << "\",\n"
+              << "      \"name\": \"" << json_escape(c->channel_name) << "\",\n"
+              << "      \"description\": \"" << json_escape(c->channel_description) << "\"";
+        });
+
+        save_array(file, "threads", _threads, [](std::ofstream &f, const Thread *th) {
+            f << "      \"team_uuid\": \"" << json_escape(uuid_to_str(th->team_uuid)) << "\",\n"
+              << "      \"channel_uuid\": \"" << json_escape(uuid_to_str(th->channel_uuid)) << "\",\n"
+              << "      \"uuid\": \"" << json_escape(uuid_to_str(th->uuid)) << "\",\n"
+              << "      \"title\": \"" << json_escape(th->thread_title) << "\",\n"
+              << "      \"message\": \"" << json_escape(th->thread_message) << "\",\n"
+              << "      \"timestamp\": " << static_cast<long long>(th->timestamp);
+        });
+
+        save_array(file, "replies", _replies, [](std::ofstream &f, const Reply *r) {
+            f << "      \"thread_uuid\": \"" << json_escape(uuid_to_str(r->thread_uuid)) << "\",\n"
+              << "      \"uuid\": \"" << json_escape(uuid_to_str(r->uuid)) << "\",\n"
+              << "      \"message\": \"" << json_escape(r->reply_message) << "\",\n"
+              << "      \"timestamp\": " << static_cast<long long>(r->timestamp);
+        });
+
+        save_array(file, "private_messages", _private_messages, [](std::ofstream &f, const PrivateMessage *pm) {
+            f << "      \"sender_uuid\": \"" << json_escape(uuid_to_str(pm->sender_uuid)) << "\",\n"
+              << "      \"receiver_uuid\": \"" << json_escape(uuid_to_str(pm->receiver_uuid)) << "\",\n"
+              << "      \"body\": \"" << json_escape(pm->body) << "\",\n"
+              << "      \"timestamp\": " << static_cast<long long>(pm->timestamp);
+        }, true);
+
+        file << "}\n";
+        file.close();
+        std::cout << "[INFO] State saved to server_save.json" << std::endl;
+    } catch (const std::exception &e) {
+        std::cout << "[ERROR] save_state exception: " << e.what() << std::endl;
     }
-
-    file << "{\n";
-
-    save_array(file, "users", _users, [](std::ofstream &f, const User *u) {
-        f << "      \"uuid\": \"" << json_escape(uuid_to_str(u->uuid)) << "\",\n"
-          << "      \"username\": \"" << json_escape(u->username) << "\",\n"
-          << "      \"is_online\": " << (u->is_online ? "true" : "false");
-    });
-
-    save_array(file, "teams", _teams, [](std::ofstream &f, const Team *t) {
-        f << "      \"uuid\": \"" << json_escape(uuid_to_str(t->uuid)) << "\",\n"
-          << "      \"name\": \"" << json_escape(t->name) << "\",\n"
-          << "      \"description\": \"" << json_escape(t->description) << "\"";
-    });
-
-    save_array(file, "channels", _channels, [](std::ofstream &f, const Channel *c) {
-        f << "      \"team_uuid\": \"" << json_escape(uuid_to_str(c->team_uuid)) << "\",\n"
-          << "      \"uuid\": \"" << json_escape(uuid_to_str(c->uuid)) << "\",\n"
-          << "      \"name\": \"" << json_escape(c->channel_name) << "\",\n"
-          << "      \"description\": \"" << json_escape(c->channel_description) << "\"";
-    });
-
-    save_array(file, "threads", _threads, [](std::ofstream &f, const Thread *th) {
-        f << "      \"team_uuid\": \"" << json_escape(uuid_to_str(th->team_uuid)) << "\",\n"
-          << "      \"channel_uuid\": \"" << json_escape(uuid_to_str(th->channel_uuid)) << "\",\n"
-          << "      \"uuid\": \"" << json_escape(uuid_to_str(th->uuid)) << "\",\n"
-          << "      \"title\": \"" << json_escape(th->thread_title) << "\",\n"
-          << "      \"message\": \"" << json_escape(th->thread_message) << "\",\n"
-          << "      \"timestamp\": " << static_cast<long long>(th->timestamp);
-    });
-
-    save_array(file, "replies", _replies, [](std::ofstream &f, const Reply *r) {
-        f << "      \"thread_uuid\": \"" << json_escape(uuid_to_str(r->thread_uuid)) << "\",\n"
-          << "      \"uuid\": \"" << json_escape(uuid_to_str(r->uuid)) << "\",\n"
-          << "      \"message\": \"" << json_escape(r->reply_message) << "\",\n"
-          << "      \"timestamp\": " << static_cast<long long>(r->timestamp);
-    });
-
-    save_array(file, "private_messages", _private_messages, [](std::ofstream &f, const PrivateMessage *pm) {
-        f << "      \"sender_uuid\": \"" << json_escape(uuid_to_str(pm->sender_uuid)) << "\",\n"
-          << "      \"receiver_uuid\": \"" << json_escape(uuid_to_str(pm->receiver_uuid)) << "\",\n"
-          << "      \"body\": \"" << json_escape(pm->body) << "\",\n"
-          << "      \"timestamp\": " << static_cast<long long>(pm->timestamp);
-    }, true);
-
-    file << "}\n";
-    file.close();
-    std::cout << "[INFO] State saved to server_save.json" << std::endl;
 }
 
 static void skip_whitespace(const std::string &s, size_t &i)
@@ -135,58 +149,73 @@ static void skip_whitespace(const std::string &s, size_t &i)
 
 static std::string parse_string(const std::string &s, size_t &i)
 {
-    if (i >= s.size() || s[i] != '"')
-        throw std::runtime_error("Expected '\"' at position " + std::to_string(i));
-    i++;
-    std::string result;
-    while (i < s.size() && s[i] != '"') {
-        if (s[i] == '\\') {
+    try {
+        if (i >= s.size() || s[i] != '"')
+            throw std::runtime_error("Expected '\"' at position " + std::to_string(i));
+        i++;
+        std::string result;
+        while (i < s.size() && s[i] != '"') {
+            if (s[i] == '\\') {
+                i++;
+                if (i >= s.size())
+                    break;
+                switch (s[i]) {
+                    case '"':  result += '"'; 
+                        break;
+                    case '\\': result += '\\'; 
+                        break;
+                    case 'n':  result += '\n'; 
+                        break;
+                    case 'r':  result += '\r'; 
+                        break;
+                    case 't':  result += '\t'; 
+                        break;
+                    default:   result += s[i]; 
+                        break;
+                }
+            } else
+                result += s[i];
             i++;
-            if (i >= s.size())
-                break;
-            switch (s[i]) {
-                case '"':  result += '"'; 
-                    break;
-                case '\\': result += '\\'; 
-                    break;
-                case 'n':  result += '\n'; 
-                    break;
-                case 'r':  result += '\r'; 
-                    break;
-                case 't':  result += '\t'; 
-                    break;
-                default:   result += s[i]; 
-                    break;
-            }
-        } else
-            result += s[i];
-        i++;
+        }
+        if (i < s.size())
+            i++;
+        return result;
+    } catch (const std::exception &e) {
+        std::cout << "[ERROR] parse_string: " << e.what() << std::endl;
+        throw;
     }
-    if (i < s.size())
-        i++;
-    return result;
 }
 
 static long long parse_number(const std::string &s, size_t &i)
 {
-    size_t start = i;
-    if (i < s.size() && s[i] == '-')
-        i++;
-    for (; i < s.size() && std::isdigit(static_cast<unsigned char>(s[i])); i++);
-    return std::stoll(s.substr(start, i - start));
+    try {
+        size_t start = i;
+        if (i < s.size() && s[i] == '-')
+            i++;
+        for (; i < s.size() && std::isdigit(static_cast<unsigned char>(s[i])); i++);
+        return std::stoll(s.substr(start, i - start));
+    } catch (const std::exception &e) {
+        std::cout << "[ERROR] parse_number: " << e.what() << std::endl;
+        throw;
+    }
 }
 
 static bool parse_bool(const std::string &s, size_t &i)
 {
-    if (s.substr(i, 4) == "true") {
-        i += 4;
-        return true;
+    try {
+        if (s.substr(i, 4) == "true") {
+            i += 4;
+            return true;
+        }
+        if (s.substr(i, 5) == "false") {
+            i += 5;
+            return false;
+        }
+        throw std::runtime_error("Expected bool at position " + std::to_string(i));
+    } catch (const std::exception &e) {
+        std::cout << "[ERROR] parse_bool: " << e.what() << std::endl;
+        throw;
     }
-    if (s.substr(i, 5) == "false") {
-        i += 5;
-        return false;
-    }
-    throw std::runtime_error("Expected bool at position " + std::to_string(i));
 }
 
 static void skip_comma(const std::string &s, size_t &i)

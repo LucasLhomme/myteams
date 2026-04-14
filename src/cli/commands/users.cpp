@@ -15,6 +15,7 @@ extern "C" {
 
 void UsersCommand::execute(const std::string& input, Cli::Socket& socket, Cli::Context& context)
 {
+    try {
     socket.send_data(input + "\n");
     std::string response = socket.receive_data();
     
@@ -32,4 +33,7 @@ void UsersCommand::execute(const std::string& input, Cli::Socket& socket, Cli::C
             client_print_users(uuid.c_str(), name.c_str(), status);
         }
     }
-}
+
+    } catch (const std::exception &e) {
+        std::cout << "[ERROR] " << e.what() << std::endl;
+    }}

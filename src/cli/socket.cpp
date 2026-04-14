@@ -25,34 +25,53 @@ namespace Cli {
 
     void Socket::create_socket()
     {
-        _sockfd = socket(AF_INET, SOCK_STREAM, 0);
-        if (_sockfd < 0) {
-            throw Exception("Failed to create socket");
+        try {
+            _sockfd = socket(AF_INET, SOCK_STREAM, 0);
+            if (_sockfd < 0) {
+                throw Exception("Failed to create socket");
+            }
+        } catch (const std::exception &e) {
+            std::cout << "[ERROR] create_socket: " << e.what() << std::endl;
+            throw;
         }
     }
 
     void Socket::create_sockaddr(const std::string& ip, const std::string& port)
     {
-        _server_addr.sin_family = AF_INET;
-        _server_addr.sin_port = htons(std::stoi(port));
+        try {
+            _server_addr.sin_family = AF_INET;
+            _server_addr.sin_port = htons(std::stoi(port));
 
-        if (inet_pton(AF_INET, ip.c_str(), &_server_addr.sin_addr) <= 0) {
-            throw Exception("Invalid address / Address not supported");
+            if (inet_pton(AF_INET, ip.c_str(), &_server_addr.sin_addr) <= 0) {
+                throw Exception("Invalid address / Address not supported");
+            }
+        } catch (const std::exception &e) {
+            std::cout << "[ERROR] create_sockaddr: " << e.what() << std::endl;
+            throw;
         }
     }
 
     void Socket::connect_socket()
     {
-        if (connect(_sockfd, (struct sockaddr *)&_server_addr, sizeof(_server_addr)) < 0) {
-            throw Exception("Connection failed");
+        try {
+            if (connect(_sockfd, (struct sockaddr *)&_server_addr, sizeof(_server_addr)) < 0) {
+                throw Exception("Connection failed");
+            }
+        } catch (const std::exception &e) {
+            std::cout << "[ERROR] connect_socket: " << e.what() << std::endl;
+            throw;
         }
     }
 
     void Socket::close_socket()
     {
-        if (_sockfd >= 0) {
-            close(_sockfd);
-            _sockfd = -1;
+        try {
+            if (_sockfd >= 0) {
+                close(_sockfd);
+                _sockfd = -1;
+            }
+        } catch (const std::exception &e) {
+            std::cout << "[ERROR] close_socket: " << e.what() << std::endl;
         }
     }
 
@@ -121,56 +140,66 @@ namespace Cli {
 
     bool Socket::send_data(const std::string& data)
     {
-        if (_sockfd < 0) {
+        try {
+            if (_sockfd < 0) {
+                return false;
+            }
+
+            _output_buffer += data;
+
+            int revents = _poll_socket(POLLOUT, 1000);
+            if (revents < 0) {
+                throw Exception("Poll failed for writing");
+            }
+
+            if (revents & POLLOUT) {
+                return _internal_send();
+            }
+
+            return false;
+        } catch (const std::exception &e) {
+            std::cout << "[ERROR] send_data: " << e.what() << std::endl;
             return false;
         }
-
-        _output_buffer += data;
-
-        int revents = _poll_socket(POLLOUT, 1000);
-        if (revents < 0) {
-            throw Exception("Poll failed for writing");
-        }
-
-        if (revents & POLLOUT) {
-            return _internal_send();
-        }
-
-        return false;
     }
 
     std::string Socket::receive_data(int timeout_ms)
     {
-        if (_sockfd < 0) {
-            return "";
-        }
-
-        const auto deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(timeout_ms);
-
-        while (true) {
-            size_t newline_pos = _input_buffer.find('\n');
-            if (newline_pos != std::string::npos) {
-                std::string result = _input_buffer.substr(0, newline_pos);
-                _input_buffer.erase(0, newline_pos + 1);
-                if (!result.empty() && result.back() == '\r') {
-                    result.pop_back();
-                }
-                return result;
-            }
-
-            const auto now = std::chrono::steady_clock::now();
-            if (now >= deadline) {
+        try {
+            if (_sockfd < 0) {
                 return "";
             }
 
-            const int remaining_ms = std::chrono::duration_cast<std::chrono::milliseconds>(deadline - now).count();
-            int revents = _poll_socket(POLLIN, remaining_ms);
-            if (revents < 0) {
-                throw Exception("Poll failed for reading");
+            const auto deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(timeout_ms);
+
+            while (true) {
+                size_t newline_pos = _input_buffer.find('\n');
+                if (newline_pos != std::string::npos) {
+                    std::string result = _input_buffer.substr(0, newline_pos);
+                    _input_buffer.erase(0, newline_pos + 1);
+                    if (!result.empty() && result.back() == '\r') {
+                        result.pop_back();
+                    }
+                    return result;
+                }
+
+                const auto now = std::chrono::steady_clock::now();
+                if (now >= deadline) {
+                    return "";
+                }
+
+                const int remaining_ms = std::chrono::duration_cast<std::chrono::milliseconds>(deadline - now).count();
+                int revents = _poll_socket(POLLIN, remaining_ms);
+                if (revents < 0) {
+                    throw Exception("Poll failed for reading");
+                }
+                if (revents & POLLIN) {
+                    _internal_recv();
+                }
             }
-            if (revents & POLLIN) {
-                _internal_recv();
-            }
+        } catch (const std::exception &e) {
+            std::cout << "[ERROR] receive_data: " << e.what() << std::endl;
+            return "";
         }
     }
 

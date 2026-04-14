@@ -10,6 +10,7 @@
 #include "server/commands/cmd_unsubscribe.hpp"
 #include "server/server.hpp"
 #include "exception.hpp"
+#include "server/server_exception.hpp"
 #include <uuid/uuid.h>
 #include <string>
 #include <algorithm>

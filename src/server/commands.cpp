@@ -56,12 +56,17 @@ void Server::extract_and_process_commands(int client_socket) {
         
     auto map_it = _command_map.find(args[0]);
 
-    if (auto generic_cmd = _command_factory.get_command(args[0])) {
-        generic_cmd->execute(*this, client_socket, args);
-    } else if (map_it != _command_map.end()) {
-      (this->*(map_it->second))(client_socket, args);
-    } else {
-      send_response(client_socket, "Unknown command");
+    try {
+        if (auto generic_cmd = _command_factory.get_command(args[0])) {
+            generic_cmd->execute(*this, client_socket, args);
+        } else if (map_it != _command_map.end()) {
+          (this->*(map_it->second))(client_socket, args);
+        } else {
+          send_response(client_socket, "Unknown command");
+        }
+    } catch (const std::exception &e) {
+        std::cout << "[ERROR] Exception during command '" << args[0] << "': " << e.what() << std::endl;
+        send_response(client_socket, "An internal error occurred while processing the command.");
     }
   }
     buffer.clear();

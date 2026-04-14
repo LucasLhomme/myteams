@@ -9,6 +9,7 @@
 #include "server/server.hpp"
 
 #include <sstream>
+#include <iostream>
 
 static std::string uuid_to_string(const uuid_t uuid)
 {
@@ -86,6 +87,7 @@ static bool append_thread_details(Server &server, std::ostringstream &response,
 
 void CmdInfo::execute(Server &server, int client_socket, const std::vector<std::string> &args)
 {
+    try {
     if (args.size() != 1) {
         server.send_response(client_socket, "Usage: /info");
         return;
@@ -135,4 +137,7 @@ void CmdInfo::execute(Server &server, int client_socket, const std::vector<std::
     }
 
     server.send_response(client_socket, response.str());
-}
+
+    } catch (const std::exception &e) {
+        std::cout << "[ERROR] " << e.what() << std::endl;
+    }}

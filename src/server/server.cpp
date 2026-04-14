@@ -43,17 +43,21 @@ Server::~Server()
  */
 void Server::accept_client()
 {
-    sockaddr_in client_addr{};
-    socklen_t client_len = sizeof(client_addr);
+    try {
+        sockaddr_in client_addr{};
+        socklen_t client_len = sizeof(client_addr);
 
-    int client_socket = ::accept(
-        _server_socket, reinterpret_cast<sockaddr *>(&client_addr), &client_len);
-    
-    if (client_socket != -1) {
-        _pollfds.push_back(make_pollfd(client_socket));
-        _client_buffers[client_socket] = "";
-        _output_buffers[client_socket] = "";
-        std::cout << "New client connected on socket " << client_socket << std::endl;
+        int client_socket = ::accept(
+            _server_socket, reinterpret_cast<sockaddr *>(&client_addr), &client_len);
+        
+        if (client_socket != -1) {
+            _pollfds.push_back(make_pollfd(client_socket));
+            _client_buffers[client_socket] = "";
+            _output_buffers[client_socket] = "";
+            std::cout << "New client connected on socket " << client_socket << std::endl;
+        }
+    } catch (const std::exception &e) {
+        std::cout << "[ERROR] accept_client exception: " << e.what() << std::endl;
     }
 }
 
@@ -64,18 +68,22 @@ void Server::accept_client()
  */
 void Server::send_response(int client_socket, const std::string &message)
 {
-    std::string msg_to_send = message;
-    if (msg_to_send.size() < 2 ||
-        msg_to_send.substr(msg_to_send.size() - 2) != "\r\n") {
-        msg_to_send += "\r\n";
-    }
-    _output_buffers[client_socket] += msg_to_send;
-    
-    for (auto &pfd : _pollfds) {
-        if (pfd.fd == client_socket) {
-            pfd.events |= POLLOUT;
-            break;
+    try {
+        std::string msg_to_send = message;
+        if (msg_to_send.size() < 2 ||
+            msg_to_send.substr(msg_to_send.size() - 2) != "\r\n") {
+            msg_to_send += "\r\n";
         }
+        _output_buffers[client_socket] += msg_to_send;
+        
+        for (auto &pfd : _pollfds) {
+            if (pfd.fd == client_socket) {
+                pfd.events |= POLLOUT;
+                break;
+            }
+        }
+    } catch (const std::exception &e) {
+        std::cout << "[ERROR] send_response exception: " << e.what() << std::endl;
     }
 }
 
@@ -85,82 +93,100 @@ void Server::send_response(int client_socket, const std::string &message)
  */
 void Server::remove_client(int client_socket)
 {
-    auto it_uuid = _socket_to_uuid.find(client_socket);
-    if (it_uuid != _socket_to_uuid.end()) {
-        server_event_user_logged_out(it_uuid->second.c_str());
-        _socket_to_uuid.erase(it_uuid);
-    }
-    
-    _socket_to_name.erase(client_socket);
-    _use_team_context.erase(client_socket);
-    _use_channel_context.erase(client_socket);
-    _use_thread_context.erase(client_socket);
-    _output_buffers.erase(client_socket);
-    
-    ::close(client_socket);
-    _client_buffers.erase(client_socket);
-
-    for (auto it = _pollfds.begin(); it != _pollfds.end(); ++it) {
-        if (it->fd == client_socket) {
-            _pollfds.erase(it);
-            break;
+    try {
+        auto it_uuid = _socket_to_uuid.find(client_socket);
+        if (it_uuid != _socket_to_uuid.end()) {
+            server_event_user_logged_out(it_uuid->second.c_str());
+            _socket_to_uuid.erase(it_uuid);
         }
+        
+        _socket_to_name.erase(client_socket);
+        _use_team_context.erase(client_socket);
+        _use_channel_context.erase(client_socket);
+        _use_thread_context.erase(client_socket);
+        _output_buffers.erase(client_socket);
+        
+        ::close(client_socket);
+        _client_buffers.erase(client_socket);
+
+        for (auto it = _pollfds.begin(); it != _pollfds.end(); ++it) {
+            if (it->fd == client_socket) {
+                _pollfds.erase(it);
+                break;
+            }
+        }
+        std::cout << "Client " << client_socket << " disconnected" << std::endl;
+    } catch (const std::exception &e) {
+        std::cout << "[ERROR] remove_client exception: " << e.what() << std::endl;
     }
-    std::cout << "Client " << client_socket << " disconnected" << std::endl;
 }
 
 bool Server::handle_writable(size_t index) {
-  int client_socket = _pollfds[index].fd;
-  auto &buffer = _output_buffers[client_socket];
+  try {
+    int client_socket = _pollfds[index].fd;
+    auto &buffer = _output_buffers[client_socket];
 
-  if (buffer.empty()) {
-    _pollfds[index].events &= ~POLLOUT;
-    return false;
-  }
-
-  ssize_t sent = ::send(client_socket, buffer.c_str(), buffer.size(), MSG_NOSIGNAL);
-  if (sent > 0) {
-    buffer.erase(0, sent);
     if (buffer.empty()) {
       _pollfds[index].events &= ~POLLOUT;
+      return false;
     }
-  } else if (sent == -1 && errno != EAGAIN && errno != EWOULDBLOCK) {
-    remove_client(client_socket);
-    return true;
+
+    ssize_t sent = ::send(client_socket, buffer.c_str(), buffer.size(), MSG_NOSIGNAL);
+    if (sent > 0) {
+      buffer.erase(0, sent);
+      if (buffer.empty()) {
+        _pollfds[index].events &= ~POLLOUT;
+      }
+    } else if (sent == -1 && errno != EAGAIN && errno != EWOULDBLOCK) {
+      remove_client(client_socket);
+      return true;
+    }
+    return false;
+  } catch (const std::exception &e) {
+    std::cout << "[ERROR] handle_writable exception: " << e.what() << std::endl;
+    return false;
   }
-  return false;
 }
 
 bool Server::handle_client_data(size_t poll_index) {
-  int client_socket = _pollfds[poll_index].fd;
-  char chunk[MAX_CHUNK_SIZE];
-  ssize_t bytes_read = ::recv(client_socket, chunk, sizeof(chunk), 0);
+  try {
+    int client_socket = _pollfds[poll_index].fd;
+    char chunk[MAX_CHUNK_SIZE];
+    ssize_t bytes_read = ::recv(client_socket, chunk, sizeof(chunk), 0);
 
-  if (bytes_read <= 0) {
-    remove_client(client_socket);
-    return true;
-  } else {
-    _client_buffers[client_socket].append(chunk, bytes_read);
-    extract_and_process_commands(client_socket);
-    if (_client_buffers.find(client_socket) == _client_buffers.end())
+    if (bytes_read <= 0) {
+      remove_client(client_socket);
       return true;
+    } else {
+      _client_buffers[client_socket].append(chunk, bytes_read);
+      extract_and_process_commands(client_socket);
+      if (_client_buffers.find(client_socket) == _client_buffers.end())
+        return true;
+    }
+    return false;
+  } catch (const std::exception &e) {
+    std::cout << "[ERROR] handle_client_data exception: " << e.what() << std::endl;
+    return false;
   }
-  return false;
 }
 
 void Server::cleanup() {
-  for (const auto &[client_socket, buffer] : _client_buffers) {
-    (void)buffer;
-    ::close(client_socket);
-  }
-  _client_buffers.clear();
+  try {
+    for (const auto &[client_socket, buffer] : _client_buffers) {
+      (void)buffer;
+      ::close(client_socket);
+    }
+    _client_buffers.clear();
 
-  if (_server_socket != -1) {
-    ::close(_server_socket);
-    _server_socket = -1;
+    if (_server_socket != -1) {
+      ::close(_server_socket);
+      _server_socket = -1;
+    }
+    _pollfds.clear();
+    _pollfds.push_back(make_pollfd(STDIN_FILENO));
+  } catch (const std::exception &e) {
+    std::cout << "[ERROR] cleanup exception: " << e.what() << std::endl;
   }
-  _pollfds.clear();
-  _pollfds.push_back(make_pollfd(STDIN_FILENO));
 }
 
 int Server::start() {

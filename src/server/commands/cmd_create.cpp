@@ -143,6 +143,7 @@ static void create_reply(Server &server, int client_socket, const std::vector<st
 
 void CmdCreate::execute(Server &server, int client_socket, const std::vector<std::string> &args)
 {
+    try {
     auto &current_team = server.get_use_team_context();
     auto &current_channel = server.get_use_channel_context();
     auto &current_thread = server.get_use_thread_context();
@@ -183,4 +184,7 @@ void CmdCreate::execute(Server &server, int client_socket, const std::vector<std
         create_reply(server, client_socket, args, current_thread[client_socket]);
     }
     server.save_state();
-}
+
+    } catch (const std::exception &e) {
+        std::cout << "[ERROR] " << e.what() << std::endl;
+    }}

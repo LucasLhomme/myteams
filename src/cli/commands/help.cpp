@@ -10,7 +10,11 @@
 
 void HelpCommand::execute(const std::string& input, Cli::Socket& socket, Cli::Context& context)
 {
+    try {
     socket.send_data(input + "\n");
     std::string response = socket.receive_data();
     std::cout << response << std::endl;
-}
+
+    } catch (const std::exception &e) {
+        std::cout << "[ERROR] " << e.what() << std::endl;
+    }}

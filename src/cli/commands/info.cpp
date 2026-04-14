@@ -1,3 +1,4 @@
+#include <iostream>
 /*
 ** EPITECH PROJECT, 2026
 ** MY-TEAMS-1
@@ -11,6 +12,7 @@
 
 extern "C" {
 #include "../../../libs/myteams/logging_client.h"
+
 }
 
 static std::vector<std::string> split_tab_fields(const std::string &line)
@@ -27,6 +29,7 @@ static std::vector<std::string> split_tab_fields(const std::string &line)
 
 void InfoCommand::execute(const std::string& input, Cli::Socket& socket, Cli::Context& context)
 {
+    try {
     (void)context;
     socket.send_data(input + "\n");
     std::string response = socket.receive_data();
@@ -71,4 +74,7 @@ void InfoCommand::execute(const std::string& input, Cli::Socket& socket, Cli::Co
         client_print_thread(fields[1].c_str(), fields[2].c_str(), timestamp,
             fields[4].c_str(), fields[5].c_str());
     }
-}
+
+    } catch (const std::exception &e) {
+        std::cout << "[ERROR] " << e.what() << std::endl;
+    }}

@@ -15,6 +15,7 @@ extern "C" {
 
 void LogoutCommand::execute(const std::string& input, Cli::Socket& socket, Cli::Context& context)
 {
+    try {
     socket.send_data(input + "\n");
     std::string response = socket.receive_data();
     
@@ -32,4 +33,7 @@ void LogoutCommand::execute(const std::string& input, Cli::Socket& socket, Cli::
     } else if (response.find("Error") != std::string::npos) {
         client_error_unauthorized();
     }
-}
+
+    } catch (const std::exception &e) {
+        std::cout << "[ERROR] " << e.what() << std::endl;
+    }}

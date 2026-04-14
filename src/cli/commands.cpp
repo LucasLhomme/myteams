@@ -44,10 +44,14 @@ void CommandHandler::execute_command(const std::string& command, const std::stri
 {
     auto it = _commands.find(command);
     if (it != _commands.end()) {
-        std::string input_with_crlf = input;
-        if (input_with_crlf.size() < 2 || input_with_crlf.substr(input_with_crlf.size()-2) != "\r\n")
-            input_with_crlf += "\r\n";
-        it->second->execute(input_with_crlf, socket, context);
+        try {
+            std::string input_with_crlf = input;
+            if (input_with_crlf.size() < 2 || input_with_crlf.substr(input_with_crlf.size()-2) != "\r\n")
+                input_with_crlf += "\r\n";
+            it->second->execute(input_with_crlf, socket, context);
+        } catch (const std::exception& e) {
+            std::cout << "[ERROR] Exception in command '" << command << "': " << e.what() << std::endl;
+        }
     } else {
         std::cout << "Unknown command" << std::endl;
     }

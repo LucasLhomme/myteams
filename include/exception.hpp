@@ -19,9 +19,4 @@ class Exception : public std::exception {
         std::string _message;
 };
 
-class SubscriptionException : public Exception {
-    public:
-        SubscriptionException(const std::string &message) : Exception(message) {}
-};
-
 #endif /* !EXCEPTION_HPP_ */

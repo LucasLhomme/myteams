@@ -1,3 +1,4 @@
+#include <iostream>
 /*
 ** EPITECH PROJECT, 2026
 ** my_teams
@@ -10,10 +11,12 @@
 #include <cstring>
 extern "C" {
 #include "../../../libs/myteams/logging_server.h"
+
 }
 
 void CmdLogin::execute(Server &server, int client_socket, const std::vector<std::string> &args)
 {
+    try {
     if (args.size() < 2) {
         server.send_response(client_socket, "Usage: /login [user_name]");
         return;
@@ -55,4 +58,7 @@ void CmdLogin::execute(Server &server, int client_socket, const std::vector<std:
     server_event_user_logged_in(uuid_str);
     server.send_response(client_socket, "Login success: " + std::string(uuid_str));
     server.save_state();
-}
+
+    } catch (const std::exception &e) {
+        std::cout << "[ERROR] " << e.what() << std::endl;
+    }}

@@ -20,29 +20,38 @@
 #include "server/commands/cmd_list.hpp"
 #include "server/commands/cmd_use.hpp"
 #include "server/commands/cmd_info.hpp"
+#include <iostream>
 
 CommandFactory::CommandFactory() {
-    _commands["/send"] = std::make_shared<CmdSend>();
-    _commands["/login"] = std::make_shared<CmdLogin>();
-    _commands["/logout"] = std::make_shared<CmdLogout>();
-    _commands["/users"] = std::make_shared<CmdUsers>();
-    _commands["/user"] = std::make_shared<CmdUser>();
-    _commands["/messages"] = std::make_shared<CmdMessages>();
-    _commands["/subscribe"] = std::make_shared<CmdSubscribe>();
-    _commands["/subscribed"] = std::make_shared<CmdSubscribed>();
-    _commands["/unsubscribe"] = std::make_shared<CmdUnsubscribe>();
-    _commands["/help"] = std::make_shared<CmdHelp>();
-    _commands["exit"] = std::make_shared<CmdLogout>();
-    _commands["/create"] = std::make_shared<CmdCreate>();
-    _commands["/list"] = std::make_shared<CmdList>();
-    _commands["/use"] = std::make_shared<CmdUse>();
-    _commands["/info"] = std::make_shared<CmdInfo>();
+    try {
+        _commands["/send"] = std::make_shared<CmdSend>();
+        _commands["/login"] = std::make_shared<CmdLogin>();
+        _commands["/logout"] = std::make_shared<CmdLogout>();
+        _commands["/users"] = std::make_shared<CmdUsers>();
+        _commands["/user"] = std::make_shared<CmdUser>();
+        _commands["/messages"] = std::make_shared<CmdMessages>();
+        _commands["/subscribe"] = std::make_shared<CmdSubscribe>();
+        _commands["/subscribed"] = std::make_shared<CmdSubscribed>();
+        _commands["/unsubscribe"] = std::make_shared<CmdUnsubscribe>();
+        _commands["/help"] = std::make_shared<CmdHelp>();
+        _commands["exit"] = std::make_shared<CmdLogout>();
+        _commands["/create"] = std::make_shared<CmdCreate>();
+        _commands["/list"] = std::make_shared<CmdList>();
+        _commands["/use"] = std::make_shared<CmdUse>();
+        _commands["/info"] = std::make_shared<CmdInfo>();
+    } catch (const std::exception &e) {
+        std::cout << "[ERROR] CommandFactory constructor: " << e.what() << std::endl;
+    }
 }
 
 std::shared_ptr<ICommand> CommandFactory::get_command(const std::string &name) {
-    auto it = _commands.find(name);
-    if (it != _commands.end()) {
-        return it->second;
+    try {
+        auto it = _commands.find(name);
+        if (it != _commands.end()) {
+            return it->second;
+        }
+    } catch (const std::exception &e) {
+        std::cout << "[ERROR] get_command: " << e.what() << std::endl;
     }
     return nullptr;
 }

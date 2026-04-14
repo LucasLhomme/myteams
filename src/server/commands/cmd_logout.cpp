@@ -1,3 +1,4 @@
+#include <iostream>
 /*
 ** EPITECH PROJECT, 2026
 ** my_teams
@@ -10,9 +11,11 @@
 
 extern "C" {
 #include "../../../libs/myteams/logging_server.h"
+
 }
 
 void CmdLogout::execute(Server &server, int client_socket, const std::vector<std::string> &args) {
+    try {
     (void)args;
     auto it = server.get_socket_to_uuid().find(client_socket);
     std::string uuid_str = "";
@@ -42,4 +45,7 @@ void CmdLogout::execute(Server &server, int client_socket, const std::vector<std
     } else {
         server.send_response(client_socket, "USER_LOGGED_OUT UNKNOWN UNKNOWN");
     }
-}
+
+    } catch (const std::exception &e) {
+        std::cout << "[ERROR] " << e.what() << std::endl;
+    }}
