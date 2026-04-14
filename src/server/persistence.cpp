@@ -300,7 +300,6 @@ static void load_users(Server &server, const std::string &json, size_t &i)
             throw std::runtime_error("Expected '{' in users array");
         i++;
         User *user = new User;
-        memset(user, 0, sizeof(*user));
         std::string uuid_str = expect_kv_str(json, i, "uuid");
         skip_comma(json, i);
         std::string username  = expect_kv_str(json, i, "username");
@@ -310,6 +309,7 @@ static void load_users(Server &server, const std::string &json, size_t &i)
         std::strncpy(user->username, username.c_str(), MAX_NAME_LENGTH - 1);
         user->username[MAX_NAME_LENGTH - 1] = '\0';
         user->is_online = is_online;
+        user->subscribed_teams.clear();
         server.get_users().push_back(user);
         server_event_user_loaded(uuid_str.c_str(), user->username);
         skip_whitespace(json, i);

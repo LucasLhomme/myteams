@@ -30,7 +30,7 @@ void ListCommand::execute(const std::string& input, Cli::Socket& socket, Cli::Co
 {
     socket.send_data(input + "\n");
     std::string response = socket.receive_data();
-    
+
     if (response.find("ERROR_UNKNOWN_TEAM:") == 0) {
         std::string uuid = response.substr(18);
         uuid.erase(uuid.find_last_not_of(" \n\r\t") + 1);
@@ -48,32 +48,36 @@ void ListCommand::execute(const std::string& input, Cli::Socket& socket, Cli::Co
     } else if (response == "No items available") {
         return;
     } else {
-        std::istringstream iss(response);
-        std::string line;
+        while (!response.empty()) {
+            std::istringstream iss(response);
+            std::string line;
 
-        while (std::getline(iss, line)) {
-            if (line.empty()) {
-                continue;
+            while (std::getline(iss, line)) {
+                if (line.empty()) {
+                    continue;
+                }
+
+                const std::vector<std::string> fields = split_tab_fields(line);
+                if (fields.empty()) {
+                    continue;
+                }
+
+                if (fields[0] == "TEAM" && fields.size() >= 4) {
+                    client_print_teams(fields[1].c_str(), fields[2].c_str(), fields[3].c_str());
+                } else if (fields[0] == "CHANNEL" && fields.size() >= 4) {
+                    client_team_print_channels(fields[1].c_str(), fields[2].c_str(), fields[3].c_str());
+                } else if (fields[0] == "THREAD" && fields.size() >= 6) {
+                    client_channel_print_threads(
+                        fields[1].c_str(), fields[2].c_str(), static_cast<time_t>(std::stoll(fields[3])),
+                        fields[4].c_str(), fields[5].c_str());
+                } else if (fields[0] == "REPLY" && fields.size() >= 5) {
+                    client_thread_print_replies(
+                        fields[1].c_str(), fields[2].c_str(), static_cast<time_t>(std::stoll(fields[3])),
+                        fields[4].c_str());
+                }
             }
 
-            const std::vector<std::string> fields = split_tab_fields(line);
-            if (fields.empty()) {
-                continue;
-            }
-
-            if (fields[0] == "TEAM" && fields.size() >= 4) {
-                client_print_teams(fields[1].c_str(), fields[2].c_str(), fields[3].c_str());
-            } else if (fields[0] == "CHANNEL" && fields.size() >= 4) {
-                client_team_print_channels(fields[1].c_str(), fields[2].c_str(), fields[3].c_str());
-            } else if (fields[0] == "THREAD" && fields.size() >= 6) {
-                client_channel_print_threads(
-                    fields[1].c_str(), fields[2].c_str(), static_cast<time_t>(std::stoll(fields[3])),
-                    fields[4].c_str(), fields[5].c_str());
-            } else if (fields[0] == "REPLY" && fields.size() >= 5) {
-                client_thread_print_replies(
-                    fields[1].c_str(), fields[2].c_str(), static_cast<time_t>(std::stoll(fields[3])),
-                    fields[4].c_str());
-            }
+            response = socket.receive_data(0);
         }
     }
 }

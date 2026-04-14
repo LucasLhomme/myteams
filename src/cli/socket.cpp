@@ -9,6 +9,7 @@
 #include "exception.hpp"
 #include <iostream>
 #include <sstream>
+#include <chrono>
 #include <cerrno>
 #include <cstring>
 
@@ -144,26 +145,33 @@ namespace Cli {
             return "";
         }
 
-        int revents = _poll_socket(POLLIN, timeout_ms);
-        if (revents < 0) {
-            throw Exception("Poll failed for reading");
+        const auto deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(timeout_ms);
+
+        while (true) {
+            size_t newline_pos = _input_buffer.find('\n');
+            if (newline_pos != std::string::npos) {
+                std::string result = _input_buffer.substr(0, newline_pos);
+                _input_buffer.erase(0, newline_pos + 1);
+                if (!result.empty() && result.back() == '\r') {
+                    result.pop_back();
+                }
+                return result;
+            }
+
+            const auto now = std::chrono::steady_clock::now();
+            if (now >= deadline) {
+                return "";
+            }
+
+            const int remaining_ms = std::chrono::duration_cast<std::chrono::milliseconds>(deadline - now).count();
+            int revents = _poll_socket(POLLIN, remaining_ms);
+            if (revents < 0) {
+                throw Exception("Poll failed for reading");
+            }
+            if (revents & POLLIN) {
+                _internal_recv();
+            }
         }
-        if (revents & POLLIN) {
-            _internal_recv();
-        }
-        if (_input_buffer.empty()) {
-            return "";
-        }
-        size_t newline_pos = _input_buffer.find('\n');
-        if (newline_pos == std::string::npos) {
-            return "";
-        }
-        std::string result = _input_buffer.substr(0, newline_pos);
-        _input_buffer.erase(0, newline_pos + 1);
-        if (!result.empty() && result.back() == '\r') {
-            result.pop_back();
-        }
-        return result;
     }
 
     bool Socket::is_readable(int timeout_ms)

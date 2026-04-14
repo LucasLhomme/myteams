@@ -14,7 +14,6 @@
 
 extern "C" {
     #include "../../../libs/myteams/logging_server.h"
-    #include "../../../libs/myteams/logging_client.h"
 }
 
 static std::string uuid_to_string(const uuid_t &uuid)
@@ -39,6 +38,16 @@ static User* get_user_from_socket(Server &server, int client_socket)
     return nullptr;
 }
 
+static Team *get_team_by_uuid(Server &server, const std::string &team_uuid)
+{
+    for (auto *team : server.get_teams()) {
+        if (team != nullptr && uuid_to_string(team->uuid) == team_uuid) {
+            return team;
+        }
+    }
+    return nullptr;
+}
+
 void CmdSubscribe::execute(Server &server, int client_socket, const std::vector<std::string> &args)
 {
     if (args.size() < 2) {
@@ -50,21 +59,25 @@ void CmdSubscribe::execute(Server &server, int client_socket, const std::vector<
         server.send_response(client_socket, "ERROR: Not connected");
         return;
     }
-    // on ajoute l'uuid de la team au vecteur de l'utilisateur
+
     std::string team_uuid_arg = args[1];
+    if (get_team_by_uuid(server, team_uuid_arg) == nullptr) {
+        server.send_response(client_socket, "ERROR_UNKNOWN_TEAM: " + team_uuid_arg);
+        return;
+    }
+
     user->subscribed_teams.push_back(team_uuid_arg);
 
-    // et on ajoute les chanel de la team aussi
-    for (auto channel : server.get_channels()) {
-        if (uuid_to_string(channel->team_uuid) == team_uuid_arg) {
+    for (auto *channel : server.get_channels()) {
+        if (channel != nullptr && uuid_to_string(channel->team_uuid) == team_uuid_arg) {
             user->subscribed_teams.push_back(uuid_to_string(channel->uuid));
         }
     }
 
-    // Log the subscription event
-    server_event_user_subscribed(team_uuid_arg.c_str(), uuid_to_string(user->uuid).c_str());
+    const std::string user_uuid = uuid_to_string(user->uuid);
+    server_event_user_subscribed(team_uuid_arg.c_str(), user_uuid.c_str());
     
-    std::string response = uuid_to_string(user->uuid) + " " + team_uuid_arg;
+    std::string response = user_uuid + " " + team_uuid_arg;
     server.send_response(client_socket, response);
 }
 
@@ -119,7 +132,6 @@ void CmdUnsubscribe::execute(Server &server, int client_socket, const std::vecto
         return;
     }
 
-    // on suppr l'uuid de la team du vecteur de l'utilisateur, et aussi les channels de la team
     std::string team_uuid_arg = args[1];
     auto it = user->subscribed_teams.begin();
     while (it != user->subscribed_teams.end()) {
@@ -128,8 +140,9 @@ void CmdUnsubscribe::execute(Server &server, int client_socket, const std::vecto
             continue;
         }
         bool is_channel_of_team = false;
-        for (auto channel : server.get_channels()) {
-            if (uuid_to_string(channel->team_uuid) == team_uuid_arg && 
+        for (auto *channel : server.get_channels()) {
+            if (channel != nullptr &&
+                uuid_to_string(channel->team_uuid) == team_uuid_arg &&
                 uuid_to_string(channel->uuid) == *it) {
                 is_channel_of_team = true;
                 break;
@@ -141,9 +154,9 @@ void CmdUnsubscribe::execute(Server &server, int client_socket, const std::vecto
             ++it;
     }
 
-    // Log the unsubscription event
-    server_event_user_unsubscribed(team_uuid_arg.c_str(), uuid_to_string(user->uuid).c_str());
+    const std::string user_uuid = uuid_to_string(user->uuid);
+    server_event_user_unsubscribed(team_uuid_arg.c_str(), user_uuid.c_str());
     
-    std::string response = uuid_to_string(user->uuid) + " " + team_uuid_arg;
+    std::string response = user_uuid + " " + team_uuid_arg;
     server.send_response(client_socket, response);
 }
