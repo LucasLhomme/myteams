@@ -52,6 +52,25 @@ static std::string uuid_to_str(const uuid_t u)
 
 
 //c la fonction qui va ecrire dans le fichier json
+template <typename T, typename Func>
+
+static void save_array(std::ofstream &f, const std::string &name, const std::vector<T*> &vec, Func write_op, bool last = false)
+{
+    f << "  \"" << name << "\": [\n";
+    bool first = true;
+    for (const auto &item : vec) {
+        if (!item)
+            continue;
+        if (!first)
+            f << ",\n";
+        first = false;
+        f << "    {\n";
+        write_op(f, item);
+        f << "\n    }";
+    }
+    f << "\n  ]" << (last ? "\n" : ",\n");
+}
+
 void Server::save_state()
 {
     std::ofstream file("server_save.json");
@@ -60,120 +79,50 @@ void Server::save_state()
         return;
     }
 
-    //je write les infos des users dans le json
     file << "{\n";
-    file << "  \"users\": [\n";
 
-    bool first = true;
-    for (const auto &user : _users) {
-        if (!user)
-            continue;
-        if (!first)
-            file << ",\n";
-        first = false;
-        file << "    {\n";
-        file << "      \"uuid\": \""     << json_escape(uuid_to_str(user->uuid))    << "\",\n";
-        file << "      \"username\": \"" << json_escape(user->username)              << "\",\n";
-        file << "      \"is_online\": "  << (user->is_online ? "true" : "false")    << "\n";
-        file << "    }";
-    }
+    save_array(file, "users", _users, [](std::ofstream &f, const User *u) {
+        f << "      \"uuid\": \"" << json_escape(uuid_to_str(u->uuid)) << "\",\n"
+          << "      \"username\": \"" << json_escape(u->username) << "\",\n"
+          << "      \"is_online\": " << (u->is_online ? "true" : "false");
+    });
 
-    //je write les infos des teams dans le json
-    file << "\n  ],\n";
-    file << "  \"teams\": [\n";
+    save_array(file, "teams", _teams, [](std::ofstream &f, const Team *t) {
+        f << "      \"uuid\": \"" << json_escape(uuid_to_str(t->uuid)) << "\",\n"
+          << "      \"name\": \"" << json_escape(t->name) << "\",\n"
+          << "      \"description\": \"" << json_escape(t->description) << "\"";
+    });
 
-    first = true;
-    for (const auto &team : _teams) {
-        if (!team)
-            continue;
-        if (!first)
-            file << ",\n";
-        first = false;
-        file << "    {\n";
-        file << "      \"uuid\": \""        << json_escape(uuid_to_str(team->uuid))  << "\",\n";
-        file << "      \"name\": \""         << json_escape(team->name)               << "\",\n";
-        file << "      \"description\": \"" << json_escape(team->description)         << "\"\n";
-        file << "    }";
-    }
+    save_array(file, "channels", _channels, [](std::ofstream &f, const Channel *c) {
+        f << "      \"team_uuid\": \"" << json_escape(uuid_to_str(c->team_uuid)) << "\",\n"
+          << "      \"uuid\": \"" << json_escape(uuid_to_str(c->uuid)) << "\",\n"
+          << "      \"name\": \"" << json_escape(c->channel_name) << "\",\n"
+          << "      \"description\": \"" << json_escape(c->channel_description) << "\"";
+    });
 
-    //je write les infos des channels dans le json
-    file << "\n  ],\n";
-    file << "  \"channels\": [\n";
+    save_array(file, "threads", _threads, [](std::ofstream &f, const Thread *th) {
+        f << "      \"team_uuid\": \"" << json_escape(uuid_to_str(th->team_uuid)) << "\",\n"
+          << "      \"channel_uuid\": \"" << json_escape(uuid_to_str(th->channel_uuid)) << "\",\n"
+          << "      \"uuid\": \"" << json_escape(uuid_to_str(th->uuid)) << "\",\n"
+          << "      \"title\": \"" << json_escape(th->thread_title) << "\",\n"
+          << "      \"message\": \"" << json_escape(th->thread_message) << "\",\n"
+          << "      \"timestamp\": " << static_cast<long long>(th->timestamp);
+    });
 
-    first = true;
-    for (const auto &channel : _channels) {
-        if (!channel)
-            continue;
-        if (!first)
-            file << ",\n";
-        first = false;
-        file << "    {\n";
-        file << "      \"team_uuid\": \""    << json_escape(uuid_to_str(channel->team_uuid))        << "\",\n";
-        file << "      \"uuid\": \""          << json_escape(uuid_to_str(channel->uuid))             << "\",\n";
-        file << "      \"name\": \""          << json_escape(channel->channel_name)                  << "\",\n";
-        file << "      \"description\": \""  << json_escape(channel->channel_description)            << "\"\n";
-        file << "    }";
-    }
+    save_array(file, "replies", _replies, [](std::ofstream &f, const Reply *r) {
+        f << "      \"thread_uuid\": \"" << json_escape(uuid_to_str(r->thread_uuid)) << "\",\n"
+          << "      \"uuid\": \"" << json_escape(uuid_to_str(r->uuid)) << "\",\n"
+          << "      \"message\": \"" << json_escape(r->reply_message) << "\",\n"
+          << "      \"timestamp\": " << static_cast<long long>(r->timestamp);
+    });
 
-    //je write les infos des threads dans le json
-    file << "\n  ],\n";
-    file << "  \"threads\": [\n";
+    save_array(file, "private_messages", _private_messages, [](std::ofstream &f, const PrivateMessage *pm) {
+        f << "      \"sender_uuid\": \"" << json_escape(uuid_to_str(pm->sender_uuid)) << "\",\n"
+          << "      \"receiver_uuid\": \"" << json_escape(uuid_to_str(pm->receiver_uuid)) << "\",\n"
+          << "      \"body\": \"" << json_escape(pm->body) << "\",\n"
+          << "      \"timestamp\": " << static_cast<long long>(pm->timestamp);
+    }, true);
 
-    first = true;
-    for (const auto &thread : _threads) {
-        if (!thread)
-            continue;
-        if (!first)
-            file << ",\n";
-        first = false;
-        file << "    {\n";
-        file << "      \"team_uuid\": \""    << json_escape(uuid_to_str(thread->team_uuid))    << "\",\n";
-        file << "      \"channel_uuid\": \"" << json_escape(uuid_to_str(thread->channel_uuid)) << "\",\n";
-        file << "      \"uuid\": \""          << json_escape(uuid_to_str(thread->uuid))         << "\",\n";
-        file << "      \"title\": \""         << json_escape(thread->thread_title)               << "\",\n";
-        file << "      \"message\": \""       << json_escape(thread->thread_message)             << "\",\n";
-        file << "      \"timestamp\": "       << static_cast<long long>(thread->timestamp)       << "\n";
-        file << "    }";
-    }
-
-    //je write les infos des replies dans le json
-    file << "\n  ],\n";
-    file << "  \"replies\": [\n";
-
-    first = true;
-    for (const auto &reply : _replies) {
-        if (!reply)
-            continue;
-        if (!first)
-            file << ",\n";
-        first = false;
-        file << "    {\n";
-        file << "      \"thread_uuid\": \"" << json_escape(uuid_to_str(reply->thread_uuid)) << "\",\n";
-        file << "      \"uuid\": \""         << json_escape(uuid_to_str(reply->uuid))         << "\",\n";
-        file << "      \"message\": \""      << json_escape(reply->reply_message)             << "\",\n";
-        file << "      \"timestamp\": "      << static_cast<long long>(reply->timestamp)      << "\n";
-        file << "    }";
-    }
-
-    //je write les infos des private messages dans le json
-    file << "\n  ],\n";
-    file << "  \"private_messages\": [\n";
-
-    first = true;
-    for (const auto &pm : _private_messages) {
-        if (!pm)
-            continue;
-        if (!first)
-            file << ",\n";
-        first = false;
-        file << "    {\n";
-        file << "      \"sender_uuid\": \""   << json_escape(uuid_to_str(pm->sender_uuid))   << "\",\n";
-        file << "      \"receiver_uuid\": \"" << json_escape(uuid_to_str(pm->receiver_uuid)) << "\",\n";
-        file << "      \"body\": \""           << json_escape(pm->body)                       << "\",\n";
-        file << "      \"timestamp\": "        << static_cast<long long>(pm->timestamp)       << "\n";
-        file << "    }";
-    }
-    file << "\n  ]\n";
     file << "}\n";
     file.close();
     std::cout << "[INFO] State saved to server_save.json" << std::endl;
@@ -291,70 +240,8 @@ static bool expect_kv_bool(const std::string &s, size_t &i, const std::string &e
 }
 
 
-static void load_users(Server &server, const std::string &json, size_t &i)
-{    
-    i++;
-    skip_whitespace(json, i);
-    while (i < json.size() && json[i] != ']') {
-        if (json[i] != '{')
-            throw std::runtime_error("Expected '{' in users array");
-        i++;
-        User *user = new User;
-        std::string uuid_str = expect_kv_str(json, i, "uuid");
-        skip_comma(json, i);
-        std::string username  = expect_kv_str(json, i, "username");
-        skip_comma(json, i);
-        bool is_online = expect_kv_bool(json, i, "is_online");
-        uuid_parse(uuid_str.c_str(), user->uuid);
-        std::strncpy(user->username, username.c_str(), MAX_NAME_LENGTH - 1);
-        user->username[MAX_NAME_LENGTH - 1] = '\0';
-        user->is_online = is_online;
-        user->subscribed_teams.clear();
-        server.get_users().push_back(user);
-        server_event_user_loaded(uuid_str.c_str(), user->username);
-        skip_whitespace(json, i);
-        if (i < json.size() && json[i] == '}')
-            i++;
-        skip_comma(json, i);
-        skip_whitespace(json, i);
-    }
-    if (i < json.size() && json[i] == ']')
-        i++;
-}
-
-static void load_teams(Server &server, const std::string &json, size_t &i)
-{
-    i++;
-    skip_whitespace(json, i);
-    while (i < json.size() && json[i] != ']') {
-        if (json[i] != '{') throw std::runtime_error("Expected '{'");
-        i++;
-        Team *team = new Team;
-        team->name[0] = '\0';
-        team->description[0] = '\0';
-        memset(team->uuid, 0, sizeof(team->uuid));
-        std::string uuid_str = expect_kv_str(json, i, "uuid");
-        skip_comma(json, i);
-        std::string name = expect_kv_str(json, i, "name");
-        skip_comma(json, i);
-        std::string description = expect_kv_str(json, i, "description");
-        uuid_parse(uuid_str.c_str(), team->uuid);
-        std::strncpy(team->name, name.c_str(), MAX_NAME_LENGTH - 1);
-        std::strncpy(team->description, description.c_str(), MAX_DESCRIPTION_LENGTH - 1);
-        team->name[MAX_NAME_LENGTH - 1] = '\0';
-        team->description[MAX_DESCRIPTION_LENGTH - 1] = '\0';
-        server.get_teams().push_back(team);
-        skip_whitespace(json, i);
-        if (i < json.size() && json[i] == '}')
-            i++;
-        skip_comma(json, i);
-        skip_whitespace(json, i);
-    }
-    if (i < json.size() && json[i] == ']')
-        i++;
-}
-
-static void load_channels(Server &server, const std::string &json, size_t &i)
+template <typename Func>
+static void parse_json_array(const std::string &json, size_t &i, Func parse_element)
 {
     i++;
     skip_whitespace(json, i);
@@ -362,30 +249,7 @@ static void load_channels(Server &server, const std::string &json, size_t &i)
         if (json[i] != '{')
             throw std::runtime_error("Expected '{'");
         i++;
-
-        Channel *ch = new Channel;
-        memset(ch->team_uuid, 0, sizeof(ch->team_uuid));
-        memset(ch->uuid, 0, sizeof(ch->uuid));
-        ch->channel_name[0] = '\0';
-        ch->channel_description[0] = '\0';
-
-        std::string team_uuid_str = expect_kv_str(json, i, "team_uuid");
-        skip_comma(json, i);
-        std::string uuid_str      = expect_kv_str(json, i, "uuid");
-        skip_comma(json, i);
-        std::string name          = expect_kv_str(json, i, "name");
-        skip_comma(json, i);
-        std::string description   = expect_kv_str(json, i, "description");
-
-        uuid_parse(team_uuid_str.c_str(), ch->team_uuid);
-        uuid_parse(uuid_str.c_str(),      ch->uuid);
-        std::strncpy(ch->channel_name,        name.c_str(),        MAX_NAME_LENGTH - 1);
-        std::strncpy(ch->channel_description, description.c_str(), MAX_DESCRIPTION_LENGTH - 1);
-        ch->channel_name[MAX_NAME_LENGTH - 1]               = '\0';
-        ch->channel_description[MAX_DESCRIPTION_LENGTH - 1] = '\0';
-
-        server.get_channels().push_back(ch);
-
+        parse_element();
         skip_whitespace(json, i);
         if (i < json.size() && json[i] == '}')
             i++;
@@ -394,132 +258,6 @@ static void load_channels(Server &server, const std::string &json, size_t &i)
     }
     if (i < json.size() && json[i] == ']')
         i++;
-}
-
-static void load_threads(Server &server, const std::string &json, size_t &i)
-{
-    i++;
-    skip_whitespace(json, i);
-    while (i < json.size() && json[i] != ']') {
-        if (json[i] != '{')
-            throw std::runtime_error("Expected '{'");
-        i++;
-        Thread *th = new Thread;
-        memset(th->team_uuid,    0, sizeof(th->team_uuid));
-        memset(th->channel_uuid, 0, sizeof(th->channel_uuid));
-        memset(th->uuid,         0, sizeof(th->uuid));
-        th->thread_title[0]   = '\0';
-        th->thread_message[0] = '\0';
-        th->timestamp = 0;
-
-        std::string team_uuid_str    = expect_kv_str(json, i, "team_uuid");
-        skip_comma(json, i);
-        std::string channel_uuid_str = expect_kv_str(json, i, "channel_uuid");
-        skip_comma(json, i);
-        std::string uuid_str         = expect_kv_str(json, i, "uuid");
-        skip_comma(json, i);
-        std::string title            = expect_kv_str(json, i, "title");
-        skip_comma(json, i);
-        std::string message          = expect_kv_str(json, i, "message");
-        skip_comma(json, i);
-        long long   timestamp        = expect_kv_num(json, i, "timestamp");
-
-        uuid_parse(team_uuid_str.c_str(),    th->team_uuid);
-        uuid_parse(channel_uuid_str.c_str(), th->channel_uuid);
-        uuid_parse(uuid_str.c_str(),         th->uuid);
-        std::strncpy(th->thread_title,   title.c_str(),   MAX_NAME_LENGTH - 1);
-        std::strncpy(th->thread_message, message.c_str(), MAX_DESCRIPTION_LENGTH - 1);
-        th->thread_title[MAX_NAME_LENGTH - 1]         = '\0';
-        th->thread_message[MAX_DESCRIPTION_LENGTH - 1] = '\0';
-        th->timestamp = static_cast<time_t>(timestamp);
-
-        server.get_threads().push_back(th);
-
-        skip_whitespace(json, i);
-        if (i < json.size() && json[i] == '}')
-            i++;
-        skip_comma(json, i);
-        skip_whitespace(json, i);
-    }
-    if (i < json.size() && json[i] == ']')
-        i++;
-}
-
-static void load_replies(Server &server, const std::string &json, size_t &i)
-{
-    i++;
-    skip_whitespace(json, i);
-    while (i < json.size() && json[i] != ']') {
-        if (json[i] != '{')
-            throw std::runtime_error("Expected '{'");
-        i++;
-
-        Reply *reply = new Reply;
-        memset(reply->thread_uuid, 0, sizeof(reply->thread_uuid));
-        memset(reply->uuid,        0, sizeof(reply->uuid));
-        reply->reply_message[0] = '\0';
-        reply->timestamp = 0;
-
-        std::string thread_uuid_str = expect_kv_str(json, i, "thread_uuid");
-        skip_comma(json, i);
-        std::string uuid_str        = expect_kv_str(json, i, "uuid");
-        skip_comma(json, i);
-        std::string message         = expect_kv_str(json, i, "message");
-        skip_comma(json, i);
-        long long   timestamp       = expect_kv_num(json, i, "timestamp");
-
-        uuid_parse(thread_uuid_str.c_str(), reply->thread_uuid);
-        uuid_parse(uuid_str.c_str(),        reply->uuid);
-        std::strncpy(reply->reply_message, message.c_str(), MAX_DESCRIPTION_LENGTH - 1);
-        reply->reply_message[MAX_DESCRIPTION_LENGTH - 1] = '\0';
-        reply->timestamp = static_cast<time_t>(timestamp);
-
-        server.get_replies().push_back(reply);
-
-        skip_whitespace(json, i);
-        if (i < json.size() && json[i] == '}')
-            i++;
-        skip_comma(json, i);
-        skip_whitespace(json, i);
-    }
-    if (i < json.size() && json[i] == ']')
-        i++;
-}
-
-static void load_private_messages(Server &server, const std::string &json, size_t &i)
-{
-    i++;
-    skip_whitespace(json, i);
-    while (i < json.size() && json[i] != ']') {
-        if (json[i] != '{')
-            throw std::runtime_error("Expected '{'");
-        i++;
-
-        PrivateMessage *pm = new PrivateMessage;
-        memset(pm, 0, sizeof(*pm));
-
-        std::string sender_uuid_str   = expect_kv_str(json, i, "sender_uuid");
-        skip_comma(json, i);
-        std::string receiver_uuid_str = expect_kv_str(json, i, "receiver_uuid");
-        skip_comma(json, i);
-        std::string body              = expect_kv_str(json, i, "body");
-        skip_comma(json, i);
-        long long   timestamp         = expect_kv_num(json, i, "timestamp");
-
-        uuid_parse(sender_uuid_str.c_str(),   pm->sender_uuid);
-        uuid_parse(receiver_uuid_str.c_str(), pm->receiver_uuid);
-        std::strncpy(pm->body, body.c_str(), MAX_BODY_LENGTH - 1);
-        pm->body[MAX_BODY_LENGTH - 1] = '\0';
-        pm->timestamp = static_cast<time_t>(timestamp);
-
-        server.get_private_messages().push_back(pm);
-
-        skip_whitespace(json, i);
-        if (i < json.size() && json[i] == '}') ++i;
-        skip_comma(json, i);
-        skip_whitespace(json, i);
-    }
-    if (i < json.size() && json[i] == ']') ++i;
 }
 
 void Server::load_state()
@@ -546,27 +284,100 @@ void Server::load_state()
             skip_whitespace(json, i);
             if (i >= json.size() || json[i] == '}')
                 break;
-
             std::string key = parse_string(json, i);
             skip_whitespace(json, i);
             if (i >= json.size() || json[i] != ':')
                 throw std::runtime_error("Expected ':' after key '" + key + "'");
-            ++i;
+            i++;
             skip_whitespace(json, i);
 
-            if      (key == "users")
-                load_users(          *this, json, i);
-            else if (key == "teams")
-                load_teams(          *this, json, i);
-            else if (key == "channels")
-                load_channels(       *this, json, i);
-            else if (key == "threads")
-                load_threads(        *this, json, i);
-            else if (key == "replies")
-                load_replies(        *this, json, i);
-            else if (key == "private_messages")
-                load_private_messages(*this, json, i);
-            else {
+            if (key == "users") {
+                parse_json_array(json, i, [&]() {
+                    User *user = new User;
+                    std::string uu = expect_kv_str(json, i, "uuid"); skip_comma(json, i);
+                    std::string un = expect_kv_str(json, i, "username"); skip_comma(json, i);
+                    user->is_online = expect_kv_bool(json, i, "is_online");
+                    uuid_parse(uu.c_str(), user->uuid);
+                    std::strncpy(user->username, un.c_str(), MAX_NAME_LENGTH - 1);
+                    user->username[MAX_NAME_LENGTH - 1] = '\0';
+                    user->subscribed_teams.clear();
+                    _users.push_back(user);
+                    server_event_user_loaded(uu.c_str(), user->username);
+                });
+            } else if (key == "teams") {
+                parse_json_array(json, i, [&]() {
+                    Team *t = new Team;
+                    std::string uu = expect_kv_str(json, i, "uuid"); skip_comma(json, i);
+                    std::string n  = expect_kv_str(json, i, "name"); skip_comma(json, i);
+                    std::string d  = expect_kv_str(json, i, "description");
+                    uuid_parse(uu.c_str(), t->uuid);
+                    std::strncpy(t->name, n.c_str(), MAX_NAME_LENGTH - 1);
+                    std::strncpy(t->description, d.c_str(), MAX_DESCRIPTION_LENGTH - 1);
+                    t->name[MAX_NAME_LENGTH - 1] = '\0';
+                    t->description[MAX_DESCRIPTION_LENGTH - 1] = '\0';
+                    _teams.push_back(t);
+                });
+            } else if (key == "channels") {
+                parse_json_array(json, i, [&]() {
+                    Channel *c = new Channel;
+                    std::string tu = expect_kv_str(json, i, "team_uuid"); skip_comma(json, i);
+                    std::string uu = expect_kv_str(json, i, "uuid"); skip_comma(json, i);
+                    std::string n  = expect_kv_str(json, i, "name"); skip_comma(json, i);
+                    std::string d  = expect_kv_str(json, i, "description");
+                    uuid_parse(tu.c_str(), c->team_uuid);
+                    uuid_parse(uu.c_str(), c->uuid);
+                    std::strncpy(c->channel_name, n.c_str(), MAX_NAME_LENGTH - 1);
+                    std::strncpy(c->channel_description, d.c_str(), MAX_DESCRIPTION_LENGTH - 1);
+                    c->channel_name[MAX_NAME_LENGTH - 1] = '\0';
+                    c->channel_description[MAX_DESCRIPTION_LENGTH - 1] = '\0';
+                    _channels.push_back(c);
+                });
+            } else if (key == "threads") {
+                parse_json_array(json, i, [&]() {
+                    Thread *th = new Thread;
+                    std::string tu = expect_kv_str(json, i, "team_uuid"); skip_comma(json, i);
+                    std::string cu = expect_kv_str(json, i, "channel_uuid"); skip_comma(json, i);
+                    std::string uu = expect_kv_str(json, i, "uuid"); skip_comma(json, i);
+                    std::string t  = expect_kv_str(json, i, "title"); skip_comma(json, i);
+                    std::string m  = expect_kv_str(json, i, "message"); skip_comma(json, i);
+                    th->timestamp = expect_kv_num(json, i, "timestamp");
+                    uuid_parse(tu.c_str(), th->team_uuid);
+                    uuid_parse(cu.c_str(), th->channel_uuid);
+                    uuid_parse(uu.c_str(), th->uuid);
+                    std::strncpy(th->thread_title, t.c_str(), MAX_NAME_LENGTH - 1);
+                    std::strncpy(th->thread_message, m.c_str(), MAX_DESCRIPTION_LENGTH - 1);
+                    th->thread_title[MAX_NAME_LENGTH - 1] = '\0';
+                    th->thread_message[MAX_DESCRIPTION_LENGTH - 1] = '\0';
+                    _threads.push_back(th);
+                });
+            } else if (key == "replies") {
+                parse_json_array(json, i, [&]() {
+                    Reply *r = new Reply;
+                    std::string tu = expect_kv_str(json, i, "thread_uuid"); skip_comma(json, i);
+                    std::string uu = expect_kv_str(json, i, "uuid"); skip_comma(json, i);
+                    std::string m  = expect_kv_str(json, i, "message"); skip_comma(json, i);
+                    r->timestamp = expect_kv_num(json, i, "timestamp");
+                    uuid_parse(tu.c_str(), r->thread_uuid);
+                    uuid_parse(uu.c_str(), r->uuid);
+                    std::strncpy(r->reply_message, m.c_str(), MAX_DESCRIPTION_LENGTH - 1);
+                    r->reply_message[MAX_DESCRIPTION_LENGTH - 1] = '\0';
+                    _replies.push_back(r);
+                });
+            } else if (key == "private_messages") {
+                parse_json_array(json, i, [&]() {
+                    PrivateMessage *pm = new PrivateMessage;
+                    memset(pm, 0, sizeof(*pm));
+                    std::string su = expect_kv_str(json, i, "sender_uuid"); skip_comma(json, i);
+                    std::string ru = expect_kv_str(json, i, "receiver_uuid"); skip_comma(json, i);
+                    std::string b  = expect_kv_str(json, i, "body"); skip_comma(json, i);
+                    pm->timestamp = expect_kv_num(json, i, "timestamp");
+                    uuid_parse(su.c_str(), pm->sender_uuid);
+                    uuid_parse(ru.c_str(), pm->receiver_uuid);
+                    std::strncpy(pm->body, b.c_str(), MAX_BODY_LENGTH - 1);
+                    pm->body[MAX_BODY_LENGTH - 1] = '\0';
+                    _private_messages.push_back(pm);
+                });
+            } else {
                 int depth = 0;
                 while (i < json.size()) {
                     char c = json[i++];
@@ -574,25 +385,23 @@ void Server::load_state()
                         depth++;
                     else if (c == ']' || c == '}') {
                         if (depth == 0) {
-                            --i;
+                            i--;
                             break;
                         }
                         depth--;
-                    }
-                    else if (c == '"') {
-                        --i;
+                    } else if (c == '"') { 
+                        i--;
                         parse_string(json, i);
                     }
                 }
             }
-
             skip_comma(json, i);
         }
     } catch (const std::exception &e) {
         std::cout << "[ERROR] Failed to load save file: " << e.what() << std::endl;
     }
 
-    std::cout << "[INFO] Loaded " << _users.size()            << " user(s), "
+    std::cout << "[INFO] Loaded " << _users.size() << " user(s), "
               << _teams.size()            << " team(s), "
               << _channels.size()         << " channel(s), "
               << _threads.size()          << " thread(s), "
