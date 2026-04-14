@@ -23,5 +23,14 @@ void UnsubscribeCommand::execute(const std::string& input, Cli::Socket& socket, 
         client_error_unknown_team(uuid.c_str());
     } else if (response.find("ERROR") != std::string::npos) {
         client_error_unauthorized();
+    } else {
+        // Parse response: "user_uuid team_uuid"
+        size_t space_pos = response.find(' ');
+        if (space_pos != std::string::npos) {
+            std::string user_uuid = response.substr(0, space_pos);
+            std::string team_uuid = response.substr(space_pos + 1);
+            team_uuid.erase(team_uuid.find_last_not_of(" \n\r\t") + 1);
+            client_print_unsubscribed(user_uuid.c_str(), team_uuid.c_str());
+        }
     }
 }
