@@ -402,10 +402,10 @@ void Server::load_state()
     }
 
     std::cout << "[INFO] Loaded " << _users.size() << " user(s), "
-              << _teams.size()            << " team(s), "
-              << _channels.size()         << " channel(s), "
-              << _threads.size()          << " thread(s), "
-              << _replies.size()          << " repl(ies), "
+              << _teams.size() << " team(s), "
+              << _channels.size() << " channel(s), "
+              << _threads.size() << " thread(s), "
+              << _replies.size() << " repl(ies), "
               << _private_messages.size() << " private message(s)."
               << std::endl;
 }
