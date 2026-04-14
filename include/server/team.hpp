@@ -38,6 +38,7 @@ struct Thread : public ATeam {
   uuid_t team_uuid;
   uuid_t channel_uuid;
   uuid_t uuid;
+  char creator_uuid[MAX_UUID_LENGTH];
   char thread_title[MAX_NAME_LENGTH];
   char thread_message[MAX_DESCRIPTION_LENGTH];
   time_t timestamp;
@@ -46,7 +47,15 @@ struct Thread : public ATeam {
 struct Reply : public ATeam {
   uuid_t thread_uuid;
   uuid_t uuid;
+  char creator_uuid[MAX_UUID_LENGTH];
   char reply_message[MAX_DESCRIPTION_LENGTH];
+  time_t timestamp;
+};
+
+struct PrivateMessage {
+  uuid_t sender_uuid;
+  uuid_t receiver_uuid;
+  char body[MAX_BODY_LENGTH];
   time_t timestamp;
 };
 
