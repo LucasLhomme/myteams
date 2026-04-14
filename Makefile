@@ -24,7 +24,7 @@ LIB_MYTEAMS_DIR = libs/myteams
 LD_LIBRARY_PATH := $(abspath $(LIB_MYTEAMS_DIR))$(if $(LD_LIBRARY_PATH),:$(LD_LIBRARY_PATH))
 
 export LD_LIBRARY_PATH
-LDFLAGS    +=   -L$(LIB_MYTEAMS_DIR) -Wl,-rpath,$(abspath $(LIB_MYTEAMS_DIR))
+LDFLAGS    +=   -L$(LIB_MYTEAMS_DIR)
 LDLIBS     +=   -lmyteams -luuid
 
 CXX         =   g++
