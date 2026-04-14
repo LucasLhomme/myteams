@@ -15,12 +15,14 @@ extern "C" {
 
 void LoginCommand::execute(const std::string& input, Cli::Socket& socket, Cli::Context& context)
 {
+    try {
     socket.send_data(input + "\n");
     std::string response = socket.receive_data();
     
     if (response.find("Login success:") == 0) {
         std::string uuid = response.substr(14);
-        uuid.erase(uuid.find_last_not_of(" \n\r\t") + 1);
+        uuid.erase(0, uuid.find_first_not_of(" \n\r\t"));
+        uuid.erase(uuid.find_last_not_of("\n\r\t") + 1);
         std::istringstream iss(input);
         std::string cmd, username;
         iss >> cmd >> username;
@@ -29,4 +31,7 @@ void LoginCommand::execute(const std::string& input, Cli::Socket& socket, Cli::C
         context.set_user(uuid, username);
         client_event_logged_in(uuid.c_str(), username.c_str());
     }
-}
+
+    } catch (const std::exception &e) {
+        std::cout << "[ERROR] " << e.what() << std::endl;
+    }}

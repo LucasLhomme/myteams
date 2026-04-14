@@ -15,6 +15,7 @@ extern "C" {
 
 void SendCommand::execute(const std::string& input, Cli::Socket& socket, Cli::Context& context)
 {
+    try {
     (void)context;
     socket.send_data(input + "\n");
     std::string response = socket.receive_data();
@@ -50,4 +51,7 @@ void SendCommand::execute(const std::string& input, Cli::Socket& socket, Cli::Co
     if (response.find("Message sent to") == 0) {
         std::cout << response << std::endl;
     }
-}
+
+    } catch (const std::exception &e) {
+        std::cout << "[ERROR] " << e.what() << std::endl;
+    }}

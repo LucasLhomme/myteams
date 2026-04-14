@@ -14,6 +14,7 @@ extern "C" {
 
 void UnsubscribeCommand::execute(const std::string& input, Cli::Socket& socket, Cli::Context& context)
 {
+    try {
     socket.send_data(input + "\n");
     std::string response = socket.receive_data();
     
@@ -33,4 +34,7 @@ void UnsubscribeCommand::execute(const std::string& input, Cli::Socket& socket, 
             client_print_unsubscribed(user_uuid.c_str(), team_uuid.c_str());
         }
     }
-}
+
+    } catch (const std::exception &e) {
+        std::cout << "[ERROR] " << e.what() << std::endl;
+    }}

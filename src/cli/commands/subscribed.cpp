@@ -15,6 +15,7 @@ extern "C" {
 
 void SubscribedCommand::execute(const std::string& input, Cli::Socket& socket, Cli::Context& context)
 {
+    try {
     socket.send_data(input + "\n");
     std::string response = socket.receive_data();
     
@@ -58,4 +59,7 @@ void SubscribedCommand::execute(const std::string& input, Cli::Socket& socket, C
             response = socket.receive_data(0);
         }
     }
-}
+
+    } catch (const std::exception &e) {
+        std::cout << "[ERROR] " << e.what() << std::endl;
+    }}

@@ -8,6 +8,7 @@
 #include "server/commands/cmd_use.hpp"
 #include "server/server.hpp"
 #include <uuid/uuid.h>
+#include <iostream>
 
 static bool is_valid_uuid(const std::string &arg)
 {
@@ -61,6 +62,7 @@ static bool thread_exists_in_channel(const Server &server, const std::string &te
 
 void CmdUse::execute(Server &server, int client_socket, const std::vector<std::string> &args)
 {
+    try {
     auto &current_team = server.get_use_team_context();
     auto &current_channel = server.get_use_channel_context();
     auto &current_thread = server.get_use_thread_context();
@@ -117,4 +119,7 @@ void CmdUse::execute(Server &server, int client_socket, const std::vector<std::s
     }
     current_thread[client_socket] = thread_uuid;
     server.send_response(client_socket, "Thread context set");
-}
+
+    } catch (const std::exception &e) {
+        std::cout << "[ERROR] " << e.what() << std::endl;
+    }}

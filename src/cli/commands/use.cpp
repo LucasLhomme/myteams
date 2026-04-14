@@ -15,6 +15,7 @@ extern "C" {
 
 void UseCommand::execute(const std::string& input, Cli::Socket& socket, Cli::Context& context)
 {
+    try {
     socket.send_data(input + "\n");
     std::string response = socket.receive_data();
     
@@ -42,4 +43,7 @@ void UseCommand::execute(const std::string& input, Cli::Socket& socket, Cli::Con
         if (!thread_uuid.empty()) context.set_thread(thread_uuid);
         std::cout << response << std::endl;
     }
-}
+
+    } catch (const std::exception &e) {
+        std::cout << "[ERROR] " << e.what() << std::endl;
+    }}

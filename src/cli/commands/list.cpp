@@ -28,6 +28,7 @@ static std::vector<std::string> split_tab_fields(const std::string &line)
 
 void ListCommand::execute(const std::string& input, Cli::Socket& socket, Cli::Context& context)
 {
+    try {
     socket.send_data(input + "\n");
     std::string response = socket.receive_data();
 
@@ -80,4 +81,7 @@ void ListCommand::execute(const std::string& input, Cli::Socket& socket, Cli::Co
             response = socket.receive_data(0);
         }
     }
-}
+
+    } catch (const std::exception &e) {
+        std::cout << "[ERROR] " << e.what() << std::endl;
+    }}

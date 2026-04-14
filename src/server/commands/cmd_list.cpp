@@ -8,6 +8,7 @@
 #include "server/commands/cmd_list.hpp"
 #include "server/server.hpp"
 #include <sstream>
+#include <iostream>
 
 extern "C" {
     #include "../../../libs/myteams/logging_server.h"
@@ -87,6 +88,7 @@ static void append_reply_list(Server &server, std::ostringstream &response,
 
 void CmdList::execute(Server &server, int client_socket, const std::vector<std::string> &args)
 {
+    try {
     auto &current_team = server.get_use_team_context();
     auto &current_channel = server.get_use_channel_context();
     auto &current_thread = server.get_use_thread_context();
@@ -116,4 +118,7 @@ void CmdList::execute(Server &server, int client_socket, const std::vector<std::
         output = "No items available";
     }
     server.send_response(client_socket, output);
-}
+
+    } catch (const std::exception &e) {
+        std::cout << "[ERROR] " << e.what() << std::endl;
+    }}

@@ -9,6 +9,11 @@
 #include <regex>
 #include <iostream>
 
+static bool is_public_command(const std::string &command)
+{
+  return command == "/login" || command == "/help";
+}
+
 void Server::extract_and_process_commands(int client_socket) {
   auto &buffer = _client_buffers[client_socket];
   size_t pos;
@@ -42,22 +47,26 @@ void Server::extract_and_process_commands(int client_socket) {
     else
         std::cout << "User: [unknown] send processing command " << args[0] << std::endl;
     
-    bool is_logged_in = (_socket_to_uuid.find(client_socket) != _socket_to_uuid.end());
-    bool is_allowed_command = (args[0] == "/login" || args[0] == "/help");
-    
-    if (!is_logged_in && !is_allowed_command) {
+    const bool is_logged_in = (_socket_to_uuid.find(client_socket) != _socket_to_uuid.end());
+
+    if (!is_logged_in && !is_public_command(args[0])) {
         send_response(client_socket, "You must be logged in to use this command. Use /login or /help");
         continue;
     }
         
     auto map_it = _command_map.find(args[0]);
 
-    if (auto generic_cmd = _command_factory.get_command(args[0])) {
-        generic_cmd->execute(*this, client_socket, args);
-    } else if (map_it != _command_map.end()) {
-      (this->*(map_it->second))(client_socket, args);
-    } else {
-      send_response(client_socket, "Unknown command");
+    try {
+        if (auto generic_cmd = _command_factory.get_command(args[0])) {
+            generic_cmd->execute(*this, client_socket, args);
+        } else if (map_it != _command_map.end()) {
+          (this->*(map_it->second))(client_socket, args);
+        } else {
+          send_response(client_socket, "Unknown command");
+        }
+    } catch (const std::exception &e) {
+        std::cout << "[ERROR] Exception during command '" << args[0] << "': " << e.what() << std::endl;
+        send_response(client_socket, "An internal error occurred while processing the command.");
     }
   }
     buffer.clear();
