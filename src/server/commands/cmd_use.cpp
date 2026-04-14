@@ -72,9 +72,9 @@ void CmdUse::execute(Server &server, int client_socket, const std::vector<std::s
     }
 
     if (args.size() == 1) {
-        current_team[client_socket].clear();
-        current_channel[client_socket].clear();
-        current_thread[client_socket].clear();
+        current_team.erase(client_socket);
+        current_channel.erase(client_socket);
+        current_thread.erase(client_socket);
         server.send_response(client_socket, "Use context cleared");
         return;
     }
