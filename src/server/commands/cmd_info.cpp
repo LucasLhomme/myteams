@@ -27,7 +27,7 @@ static bool append_user_details(Server &server, std::ostringstream &response,
         if (user == nullptr || uuid_to_string(user->uuid) != user_uuid) {
             continue;
         }
-        response << "USER\t" << uuid_to_string(user->uuid) << '\t' << user->username << '\t'
+        response << "USER\t" << uuid_to_string(user->uuid) << "\t" << user->username << "\t"
             << (user->is_online ? 1 : 0);
         return true;
     }
@@ -43,7 +43,7 @@ static bool append_team_details(Server &server, std::ostringstream &response,
         if (team == nullptr || uuid_to_string(team->uuid) != team_uuid) {
             continue;
         }
-        response << "TEAM\t" << uuid_to_string(team->uuid) << '\t' << team->name << '\t'
+        response << "TEAM\t" << uuid_to_string(team->uuid) << "\t" << team->name << "\t"
             << team->description;
         return true;
     }
@@ -59,8 +59,8 @@ static bool append_channel_details(Server &server, std::ostringstream &response,
         if (channel == nullptr || uuid_to_string(channel->uuid) != channel_uuid) {
             continue;
         }
-        response << "CHANNEL\t" << uuid_to_string(channel->uuid) << '\t'
-            << channel->channel_name << '\t' << channel->channel_description;
+        response << "CHANNEL\t" << uuid_to_string(channel->uuid) << "\t"
+            << channel->channel_name << "\t" << channel->channel_description;
         return true;
     }
     return false;
@@ -75,9 +75,10 @@ static bool append_thread_details(Server &server, std::ostringstream &response,
         if (thread == nullptr || uuid_to_string(thread->uuid) != thread_uuid) {
             continue;
         }
-        response << "THREAD\t" << uuid_to_string(thread->uuid) << '\t'
-            << thread->creator_uuid << '\t' << thread->timestamp << '\t'
-            << thread->thread_title << '\t' << thread->thread_message;
+        // Format conforme à la lib: THREAD <uuid> <creator> <timestamp> <title> <body>
+        response << "THREAD\t" << uuid_to_string(thread->uuid) << "\t"
+            << thread->creator_uuid << "\t" << thread->timestamp << "\t"
+            << thread->thread_title << "\t" << thread->thread_message;
         return true;
     }
     return false;
@@ -96,7 +97,14 @@ void CmdInfo::execute(Server &server, int client_socket, const std::vector<std::
     const auto &socket_to_uuid = server.get_socket_to_uuid();
     std::ostringstream response;
 
-    if (current_team.find(client_socket) == current_team.end()) {
+    const bool has_team = current_team.find(client_socket) != current_team.end() &&
+        !current_team.at(client_socket).empty();
+    const bool has_channel = current_channel.find(client_socket) != current_channel.end() &&
+        !current_channel.at(client_socket).empty();
+    const bool has_thread = current_thread.find(client_socket) != current_thread.end() &&
+        !current_thread.at(client_socket).empty();
+
+    if (!has_team) {
         const auto it = socket_to_uuid.find(client_socket);
         if (it == socket_to_uuid.end()) {
             server.send_response(client_socket, "ERROR");
@@ -106,13 +114,13 @@ void CmdInfo::execute(Server &server, int client_socket, const std::vector<std::
             server.send_response(client_socket, "ERROR_UNKNOWN_USER:" + it->second);
             return;
         }
-    } else if (current_channel.find(client_socket) == current_channel.end()) {
+    } else if (!has_channel) {
         const std::string &team_uuid = current_team.at(client_socket);
         if (!append_team_details(server, response, team_uuid)) {
             server.send_response(client_socket, "ERROR_UNKNOWN_TEAM:" + team_uuid);
             return;
         }
-    } else if (current_thread.find(client_socket) == current_thread.end()) {
+    } else if (!has_thread) {
         const std::string &channel_uuid = current_channel.at(client_socket);
         if (!append_channel_details(server, response, channel_uuid)) {
             server.send_response(client_socket, "ERROR_UNKNOWN_CHANNEL:" + channel_uuid);

@@ -8,33 +8,37 @@
 #include "server/commands/cmd_logout.hpp"
 #include "server/server.hpp"
 
-#include <cstring>
 extern "C" {
 #include "../../../libs/myteams/logging_server.h"
 }
 
 void CmdLogout::execute(Server &server, int client_socket, const std::vector<std::string> &args) {
-  (void)args;
-  auto it = server.get_socket_to_uuid().find(client_socket);
-  if (it != server.get_socket_to_uuid().end()) {
-    std::string uuid_str = it->second;
+    (void)args;
+    auto it = server.get_socket_to_uuid().find(client_socket);
+    std::string uuid_str = "";
     std::string username_str = "";
+    bool found = false;
 
-    for (auto &user : server.get_users()) {
-      char u_str[MAX_UUID_LENGTH];
-      uuid_unparse(user->uuid, u_str);
-      if (std::string(u_str) == uuid_str) {
-        username_str = user->username;
-        user->is_online = false;
-        break;
-      }
+    if (it != server.get_socket_to_uuid().end()) {
+        uuid_str = it->second;
+        for (auto &user : server.get_users()) {
+            char u_str[MAX_UUID_LENGTH];
+            uuid_unparse(user->uuid, u_str);
+            if (std::string(u_str) == uuid_str) {
+                username_str = user->username;
+                user->is_online = false;
+                found = true;
+                break;
+            }
+        }
+        server_event_user_logged_out(uuid_str.c_str());
+        server.save_state();
+        server.get_socket_to_uuid().erase(it);
+        server.get_socket_to_name().erase(client_socket);
     }
-    server.send_response(client_socket, "LOGOUT_DATA " + uuid_str + " " + username_str);
-    server.save_state();
-    server_event_user_logged_out(uuid_str.c_str());
-    server.get_socket_to_uuid().erase(it);
-    server.get_socket_to_name().erase(client_socket);
-  } else {
-    server.send_response(client_socket, "Error: Not logged in");
-  }
+    if (!uuid_str.empty()) {
+        server.send_response(client_socket, "USER_LOGGED_OUT " + uuid_str + " " + username_str);
+    } else {
+        server.send_response(client_socket, "USER_LOGGED_OUT UNKNOWN UNKNOWN");
+    }
 }
