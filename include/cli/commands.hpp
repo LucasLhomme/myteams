@@ -11,6 +11,7 @@
 #include <string>
 #include <unordered_map>
 #include <memory>
+#include <vector>
 #include "./socket.hpp"
 #include "./context.hpp"
 
@@ -32,5 +33,7 @@ public:
     void process_command(const std::string& command, Cli::Socket& socket, Cli::Context& context);
     void execute_command(const std::string& command, const std::string& input, Cli::Socket& socket, Cli::Context& context);
 };
+
+std::vector<std::string> split_args(const std::string& command);
 
 #endif /* !COMMANDS_HPP_ */

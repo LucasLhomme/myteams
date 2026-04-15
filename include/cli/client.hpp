@@ -7,8 +7,9 @@
 
 #ifndef CLIENT_HPP_
 #define CLIENT_HPP_
-
+extern "C" {
 #include "../../libs/myteams/logging_client.h"
+}
 #include "./context.hpp"
 #include <string>
 

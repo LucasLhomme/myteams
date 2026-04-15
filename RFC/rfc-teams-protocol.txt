@@ -1,0 +1,359 @@
+                                        MY-TEAMS Project
+                                    Teams Protocol (TEAMS)
+
+Status of this Memo
+
+   This memo provides information for the Epitech community. Distribution
+   of this memo is unlimited.
+
+Table of Contents
+
+   1. Introduction
+   2. Protocol Overview
+   3. Commands
+   4. Server Replies and Events
+   5. Error Codes
+   6. Data Types and Structures
+   7. Typical Flows
+   8. Security Considerations
+   9. Example Dialogues
+   10. References
+
+   Diagramme d’échange Client/Serveur
+   -----------------------------------
+------------------------------------------
+
+   +--------+                                 +--------+
+   | Client |                                 | Server |
+   +--------+                                 +--------+
+      |                                         |
+      |------ Connexion TCP ------------------->|   (1. Ouverture de la connexion réseau)
+      |                                         |
+      |------ /login "user_name" -------------->|   (2. Demande d'authentification)
+      |                                         |
+      |<----- client_event_logged_in -----------|   (3. Confirmation de login, UUID et nom reçus)
+      |                                         |
+      |------ /use "team_uuid" ---------------->|   (4. Sélection du contexte équipe)
+      |<----- Réponse: contexte changé ---------|   (5. Accusé de réception du contexte)
+      |                                         |
+      |------ /list --------------------------->|   (6. Demande de liste d'entités)
+      |<----- Réponse: liste d'entités ---------|   (7. Liste des teams/channels/threads)
+      |                                         |
+      |------ /info --------------------------->|   (8. Demande d'informations sur l'entité courante)
+      |<----- Réponse: infos entité ------------|   (9. Détails sur team/channel/thread/user)
+      |                                         |
+      |------ /send "user_uuid" "msg" --------->|   (10. Envoi d'un message privé)
+      |<----- client_event_private_message ------|   (11. Notification de réception du message)
+      |                                         |
+      |------ /create "team_name" "desc" ------>|   (12. Création d'une équipe)
+      |<----- client_event_team_created --------|   (13. Notification de création à tous les clients)
+      |                                         |
+      |------ /subscribe "team_uuid" ---------->|   (14. Abonnement à une équipe)
+      |<----- client_print_subscribed ----------|   (15. Confirmation d'abonnement)
+      |                                         |
+      |------ /logout ------------------------->|   (16. Déconnexion)
+      |<----- client_event_logged_out ----------|   (17. Notification de logout)
+      |                                         |
+
+Légende :
+  - Les flèches --> indiquent les requêtes du client vers le serveur.
+  - Les flèches <-- indiquent les réponses ou événements du serveur vers le client.
+  - Chaque étape est numérotée et commentée pour clarifier le rôle de l'échange.
+  - Les commandes /use, /list, /info, /create, /send, /subscribe sont des exemples, d'autres existent (voir section 3).
+  - Les événements client_event_* sont des notifications asynchrones envoyées par le serveur.
+
+1. Introduction
+
+   The Teams Protocol (TEAMS) defines a client/server protocol for collaborative
+   messaging, inspired by modern team chat applications. It enables users to
+   authenticate, join teams, create channels, send messages, and manage
+   collaborative discussions in a structured way.
+
+2. Protocol Overview
+
+   The protocol operates over TCP. The client initiates a connection to the
+   server, authenticates, and issues commands using a text-based syntax. The
+   server responds with structured replies and asynchronous events.
+
+   Context navigation (team/channel/thread) is explicit and required for
+   certain commands. Most actions require authentication; some require
+   subscription to a team.
+
+3. Commands
+
+   All commands are prefixed with a slash ('/'). Arguments containing spaces
+   must be enclosed in double quotes. Example: /login "user_name"
+
+   Supported commands:
+     /login "user_name"
+     /logout
+     /users
+     /user "user_uuid"
+     /send "user_uuid" "message_body"
+     /messages "user_uuid"
+     /list
+     /info
+     /create ...
+     /subscribe "team_uuid"
+     /unsubscribe "team_uuid"
+     /subscribed ["team_uuid"]
+     /use ...
+     /help
+
+   See Section 3.1 for detailed syntax and semantics.
+
+3.1. Detailed Commands
+---------------------
+
+Each command starts with a slash ('/'). Arguments containing spaces must be enclosed in double quotes.
+
+Main commands:
+
+* /login "user_name"
+   - Description: Authenticates the user, creates the account if needed.
+   - Response: client_event_logged_in(user_uuid, user_name)
+   - Errors: already logged in, invalid name
+   - Example: /login "Alice"
+
+* /logout
+   - Description: Logs out the current user.
+   - Response: client_event_logged_out(user_uuid, user_name)
+   - Errors: not logged in
+   - Example: /logout
+
+* /users
+   - Description: Lists all users (uuid, name, status).
+   - Response: client_print_users(user_uuid, user_name, user_status) (for each user)
+   - Errors: not logged in
+   - Example: /users
+
+* /user "user_uuid"
+   - Description: Shows information about a user.
+   - Response: client_print_user(user_uuid, user_name, user_status)
+   - Errors: unknown user, not logged in
+   - Example: /user "b1e2..."
+
+* /send "user_uuid" "message_body"
+   - Description: Sends a private message to a user.
+   - Response: client_event_private_message_received(user_uuid, message_body)
+   - Errors: unknown user, not logged in
+   - Example: /send "b1e2..." "Hello!"
+
+* /messages "user_uuid"
+   - Description: Lists private messages exchanged with a user.
+   - Response: client_private_message_print_messages(sender_uuid, timestamp, message_body) (for each message)
+   - Errors: unknown user, not logged in
+   - Example: /messages "b1e2..."
+
+* /list
+   - Description: Lists entities in the current context (teams, channels, threads, replies).
+   - Response:
+         - client_print_teams(team_uuid, team_name, team_description)
+         - client_team_print_channels(channel_uuid, channel_name, channel_description)
+         - client_channel_print_threads(thread_uuid, user_uuid, timestamp, title, body)
+         - client_thread_print_replies(thread_uuid, user_uuid, timestamp, body)
+   - Errors: invalid context, not logged in
+   - Example: /list
+
+* /info
+   - Description: Shows information about the current entity (team, channel, thread, user).
+   - Response:
+         - client_print_team(team_uuid, team_name, team_description)
+         - client_print_channel(channel_uuid, channel_name, channel_description)
+         - client_print_thread(thread_uuid, user_uuid, timestamp, title, body)
+         - client_print_user(user_uuid, user_name, user_status)
+   - Errors: invalid context, not logged in
+   - Example: /info
+
+* /create ...
+   - Description: Creates an entity according to the context (team, channel, thread, reply).
+   - Response:
+         - client_print_team_created(team_uuid, team_name, team_description)
+         - client_print_channel_created(channel_uuid, channel_name, channel_description)
+         - client_print_thread_created(thread_uuid, user_uuid, timestamp, title, body)
+         - client_print_reply_created(thread_uuid, user_uuid, timestamp, body)
+         - client_event_team_created, client_event_channel_created, client_event_thread_created, client_event_thread_reply_received (broadcast)
+   - Errors: already exists, unauthorized, not logged in, invalid context
+   - Example: /create "team_name" "description"
+
+* /subscribe "team_uuid"
+   - Description: Subscribes to a team.
+   - Response: client_print_subscribed(user_uuid, team_uuid)
+   - Errors: unknown team, already subscribed, not logged in
+   - Example: /subscribe "a1b2..."
+
+* /unsubscribe "team_uuid"
+   - Description: Unsubscribes from a team.
+   - Response: client_print_unsubscribed(user_uuid, team_uuid)
+   - Errors: unknown team, not subscribed, not logged in
+   - Example: /unsubscribe "a1b2..."
+
+* /subscribed ["team_uuid"]
+   - Description: Lists the teams the user is subscribed to or the subscribers of a team.
+   - Response: client_print_users(user_uuid, user_name, user_status) (for each subscriber)
+   - Errors: unknown team, not logged in
+   - Example: /subscribed "a1b2..."
+
+* /use ...
+   - Description: Changes the current context (team, channel, thread).
+   - Response: context change confirmation
+   - Errors: unknown entity, not logged in
+   - Example: /use "team_uuid" "channel_uuid" "thread_uuid"
+
+* /help
+   - Description: Shows help about available commands.
+   - Response: help text
+   - Example: /help
+
+4. Server Replies and Events
+
+   The server responds to commands with structured messages, including:
+     - Success responses (entity created, info, list, etc.)
+     - Asynchronous events (user login/logout, new message, entity creation)
+     - Error messages (see Section 5)
+
+   Example event: client_event_team_created(team_uuid, team_name, team_description)
+
+4.1. Server Events Details
+-------------------------
+
+The server sends synchronous responses (after a command) and asynchronous events (notifications, broadcast).
+
+Main events (see logging_client.h):
+
+- client_event_logged_in(user_uuid, user_name): user login notification
+- client_event_logged_out(user_uuid, user_name): user logout notification
+- client_event_private_message_received(user_uuid, message_body): private message received
+- client_event_team_created(team_uuid, team_name, team_description): team creation (broadcast)
+- client_event_channel_created(channel_uuid, channel_name, channel_description): channel creation (broadcast)
+- client_event_thread_created(thread_uuid, user_uuid, timestamp, title, body): thread creation (broadcast)
+- client_event_thread_reply_received(team_uuid, thread_uuid, user_uuid, reply_body): new reply in a thread (broadcast)
+
+"Print" responses (listing or info):
+- client_print_users(user_uuid, user_name, user_status)
+- client_print_teams(team_uuid, team_name, team_description)
+- client_team_print_channels(channel_uuid, channel_name, channel_description)
+- client_channel_print_threads(thread_uuid, user_uuid, timestamp, title, body)
+- client_thread_print_replies(thread_uuid, user_uuid, timestamp, body)
+- client_private_message_print_messages(sender_uuid, timestamp, message_body)
+- client_print_user(user_uuid, user_name, user_status)
+- client_print_team(team_uuid, team_name, team_description)
+- client_print_channel(channel_uuid, channel_name, channel_description)
+- client_print_thread(thread_uuid, user_uuid, timestamp, title, body)
+
+Action confirmation responses:
+- client_print_team_created(team_uuid, team_name, team_description)
+- client_print_channel_created(channel_uuid, channel_name, channel_description)
+- client_print_thread_created(thread_uuid, user_uuid, timestamp, title, body)
+- client_print_reply_created(thread_uuid, user_uuid, timestamp, body)
+- client_print_subscribed(user_uuid, team_uuid)
+- client_print_unsubscribed(user_uuid, team_uuid)
+
+5. Error Codes
+
+   The following errors may be returned:
+     - Unknown team/channel/thread/user (resource does not exist)
+     - Unauthorized (action not permitted)
+     - Already exists (resource name conflict)
+
+   See Section 5.1 for details and examples.
+
+5.1. Detailed Error Codes
+------------------------
+
+Errors are returned as explicit messages, often via the following functions (see logging_client.h):
+
+- client_error_unknown_team(team_uuid): the team does not exist
+- client_error_unknown_channel(channel_uuid): the channel does not exist
+- client_error_unknown_thread(thread_uuid): the thread does not exist
+- client_error_unknown_user(user_uuid): the user does not exist
+- client_error_unauthorized(): unauthorized action (e.g. not logged in, not subscribed)
+- client_error_already_exist(): resource already exists (name or title already taken)
+
+Examples of occurrence:
+   - /subscribe "team_uuid" on a non-existent team → client_error_unknown_team
+   - /create "team_name" "desc" with an already taken name → client_error_already_exist
+   - /send "user_uuid" ... to an unknown user → client_error_unknown_user
+   - /create "thread_title" ... without being subscribed to the team → client_error_unauthorized
+
+6. Data Types and Structures
+
+   - UUID: Universally unique identifier for users, teams, channels, threads
+   - Timestamp: UNIX time for creation/events
+   - Status: User status (0: offline, 1: online)
+   - Entities: user, team, channel, thread, reply, message
+
+6.1. Data Structures
+--------------------
+
+* UUID: Unique string (e.g. 550e8400-e29b-41d4-a716-446655440000) used to identify users, teams, channels, threads.
+* Timestamp: UNIX integer (seconds since epoch) for creation/message dating.
+* User status: 0 = offline, 1 = online.
+
+Main entities:
+   - User: uuid, name, status
+   - Team: uuid, name, description
+   - Channel: uuid, name, description
+   - Thread: uuid, user_uuid (author), timestamp, title, body
+   - Reply: thread_uuid, user_uuid (author), timestamp, body
+   - Private message: sender_uuid, timestamp, body
+
+7. Typical Flows
+
+   - Authentication (login/logout)
+   - Navigation (use/list/info)
+   - Messaging (send/messages)
+   - Entity management (create/subscribe/unsubscribe)
+
+8. Security Considerations
+
+   - Authentication required for most commands
+   - Subscription required for some actions/events
+   - Error handling for unauthorized actions
+
+8.1. Security and Access Control
+-------------------------------
+
+* Authentication is required for all commands except /login and /help.
+* Some actions require being subscribed to the team (creating channel, thread, reply).
+* client_error_unauthorized errors are returned when trying to perform an action without sufficient rights.
+* UUIDs must not be guessable, to prevent identity spoofing or unauthorized access.
+* Private messages are only delivered to the intended recipients.
+
+9. Example Dialogues
+
+9. Example Client/Server Dialogues
+----------------------------------
+
+Example 1: Login and user listing
+
+   Client: /login "Alice"
+   Server: client_event_logged_in("550e...", "Alice")
+   Client: /users
+   Server:
+      client_print_users("550e...", "Alice", 1)
+      client_print_users("a1b2...", "Bob", 0)
+
+Example 2: Sending a private message
+
+   Client: /send "a1b2..." "Hello Bob!"
+   Server: client_event_private_message_received("550e...", "Hello Bob!")
+
+Example 3: Creating a team
+
+   Client: /create "DevTeam" "Main development"
+   Server:
+      client_print_team_created("cafe...", "DevTeam", "Main development")
+      client_event_team_created("cafe...", "DevTeam", "Main development")
+
+Example 4: Error on unknown resource
+
+   Client: /subscribe "deadbeef..."
+   Server: client_error_unknown_team("deadbeef...")
+
+10. References
+
+   - RFC 959 (FTP)
+   - Project headers and documentation
+
+
