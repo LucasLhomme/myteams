@@ -13,6 +13,12 @@
 #include <cerrno>
 #include <cstring>
 #include <sys/socket.h>
+#include <sstream>
+#include <vector>
+
+extern "C" {
+#include "../../libs/myteams/logging_client.h"
+}
 
 Cli::ClientPollState::ClientPollState(int server_sockfd) : stdin_fd{STDIN_FILENO, POLLIN, 0}, server_fd{server_sockfd, POLLIN | POLLHUP | POLLERR, 0} {
 
@@ -21,6 +27,49 @@ Cli::ClientPollState::ClientPollState(int server_sockfd) : stdin_fd{STDIN_FILENO
 std::array<pollfd, 2> Cli::ClientPollState::to_array() const
 {
     return {stdin_fd, server_fd};
+}
+
+static std::vector<std::string> split_tab_fields(const std::string &line)
+{
+    std::vector<std::string> fields;
+    std::string field;
+    std::istringstream stream(line);
+
+    while (std::getline(stream, field, '\t')) {
+        fields.push_back(field);
+    }
+    return fields;
+}
+
+static bool handle_async_event(const std::string &line)
+{
+    const std::vector<std::string> fields = split_tab_fields(line);
+
+    if (fields.size() < 2 || fields[0] != "EVENT") {
+        return false;
+    }
+
+    if (fields[1] == "TEAM_CREATED" && fields.size() >= 5) {
+        client_event_team_created(fields[2].c_str(), fields[3].c_str(), fields[4].c_str());
+        return true;
+    }
+    if (fields[1] == "CHANNEL_CREATED" && fields.size() >= 5) {
+        client_event_channel_created(fields[2].c_str(), fields[3].c_str(), fields[4].c_str());
+        return true;
+    }
+    if (fields[1] == "THREAD_CREATED" && fields.size() >= 7) {
+        const time_t timestamp = static_cast<time_t>(std::stoll(fields[4]));
+
+        client_event_thread_created(fields[2].c_str(), fields[3].c_str(), timestamp,
+            fields[5].c_str(), fields[6].c_str());
+        return true;
+    }
+    if (fields[1] == "THREAD_REPLY_RECEIVED" && fields.size() >= 6) {
+        client_event_thread_reply_received(fields[2].c_str(), fields[3].c_str(),
+            fields[4].c_str(), fields[5].c_str());
+        return true;
+    }
+    return false;
 }
 
 namespace Cli {
@@ -58,13 +107,17 @@ namespace Cli {
                 }
 
                 if (fds[1].revents & POLLIN) {
-                    char peek_char = 0;
-                    ssize_t peeked = recv(client_socket.get_sockfd(), &peek_char, 1, MSG_PEEK | MSG_DONTWAIT);
-                    if (peeked == 0) {
-                        std::cout << "Server disconnected" << std::endl;
-                        break;
+                    while (client_socket.is_readable(0)) {
+                        const std::string line = client_socket.receive_data(1);
+
+                        if (line.empty() || !client_socket.is_connected()) {
+                            break;
+                        }
+                        if (!handle_async_event(line)) {
+                            std::cout << line << std::endl;
+                        }
                     }
-                    if (peeked < 0 && errno != EAGAIN && errno != EWOULDBLOCK) {
+                    if (!client_socket.is_connected()) {
                         std::cout << "Server disconnected" << std::endl;
                         break;
                     }

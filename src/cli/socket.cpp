@@ -14,7 +14,7 @@
 #include <cstring>
 
 namespace Cli {
-    Socket::Socket() : _sockfd(-1), _server_addr({})
+    Socket::Socket() : _sockfd(-1), _is_connected(false), _server_addr({})
     {
     }
 
@@ -57,6 +57,7 @@ namespace Cli {
             if (connect(_sockfd, (struct sockaddr *)&_server_addr, sizeof(_server_addr)) < 0) {
                 throw Exception("Connection failed");
             }
+            _is_connected = true;
         } catch (const std::exception &e) {
             std::cout << "[ERROR] connect_socket: " << e.what() << std::endl;
             throw;
@@ -70,6 +71,7 @@ namespace Cli {
                 close(_sockfd);
                 _sockfd = -1;
             }
+            _is_connected = false;
         } catch (const std::exception &e) {
             std::cout << "[ERROR] close_socket: " << e.what() << std::endl;
         }
@@ -131,6 +133,7 @@ namespace Cli {
         }
 
         if (received == 0) {
+            _is_connected = false;
             throw Exception("Connection closed by server");
         }
 
@@ -205,11 +208,15 @@ namespace Cli {
 
     bool Socket::is_readable(int timeout_ms)
     {
-        if (_sockfd < 0) {
+        if (_sockfd < 0 || !_is_connected) {
             return false;
         }
 
         int revents = _poll_socket(POLLIN, timeout_ms);
+        if (revents & (POLLERR | POLLHUP | POLLNVAL)) {
+            _is_connected = false;
+            return false;
+        }
         return (revents > 0) && (revents & POLLIN);
     }
 

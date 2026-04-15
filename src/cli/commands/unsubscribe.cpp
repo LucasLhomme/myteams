@@ -12,6 +12,18 @@ extern "C" {
 #include "../../../libs/myteams/logging_client.h"
 }
 
+static std::string trim_copy(const std::string &value)
+{
+    const size_t first = value.find_first_not_of(" \n\r\t");
+
+    if (first == std::string::npos) {
+        return "";
+    }
+    const size_t last = value.find_last_not_of(" \n\r\t");
+
+    return value.substr(first, last - first + 1);
+}
+
 void UnsubscribeCommand::execute(const std::string& input, Cli::Socket& socket, Cli::Context& context)
 {
     try {
@@ -19,8 +31,7 @@ void UnsubscribeCommand::execute(const std::string& input, Cli::Socket& socket, 
     std::string response = socket.receive_data();
     
     if (response.find("ERROR_UNKNOWN_TEAM:") == 0) {
-        std::string uuid = response.substr(18);
-        uuid.erase(uuid.find_last_not_of(" \n\r\t") + 1);
+        std::string uuid = trim_copy(response.substr(std::string("ERROR_UNKNOWN_TEAM:").size()));
         client_error_unknown_team(uuid.c_str());
     } else if (response.find("ERROR") != std::string::npos) {
         client_error_unauthorized();

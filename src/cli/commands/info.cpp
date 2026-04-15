@@ -15,6 +15,18 @@ extern "C" {
 
 }
 
+static std::string trim_copy(const std::string &value)
+{
+    const size_t first = value.find_first_not_of(" \n\r\t");
+
+    if (first == std::string::npos) {
+        return "";
+    }
+    const size_t last = value.find_last_not_of(" \n\r\t");
+
+    return value.substr(first, last - first + 1);
+}
+
 static std::vector<std::string> split_tab_fields(const std::string &line)
 {
     std::vector<std::string> fields;
@@ -35,20 +47,17 @@ void InfoCommand::execute(const std::string& input, Cli::Socket& socket, Cli::Co
     std::string response = socket.receive_data();
 
     if (response.find("ERROR_UNKNOWN_TEAM:") == 0) {
-        std::string uuid = response.substr(19);
-        uuid.erase(uuid.find_last_not_of(" \n\r\t") + 1);
+        std::string uuid = trim_copy(response.substr(std::string("ERROR_UNKNOWN_TEAM:").size()));
         client_error_unknown_team(uuid.c_str());
         return;
     }
     if (response.find("ERROR_UNKNOWN_CHANNEL:") == 0) {
-        std::string uuid = response.substr(22);
-        uuid.erase(uuid.find_last_not_of(" \n\r\t") + 1);
+        std::string uuid = trim_copy(response.substr(std::string("ERROR_UNKNOWN_CHANNEL:").size()));
         client_error_unknown_channel(uuid.c_str());
         return;
     }
     if (response.find("ERROR_UNKNOWN_THREAD:") == 0) {
-        std::string uuid = response.substr(21);
-        uuid.erase(uuid.find_last_not_of(" \n\r\t") + 1);
+        std::string uuid = trim_copy(response.substr(std::string("ERROR_UNKNOWN_THREAD:").size()));
         client_error_unknown_thread(uuid.c_str());
         return;
     }

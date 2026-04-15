@@ -8,10 +8,12 @@
 #include "server/commands/cmd_create.hpp"
 #include "server/server.hpp"
 #include "server/team.hpp"
+#include <algorithm>
 #include <cstring>
 #include <uuid/uuid.h>
 #include <ctime>
 #include <iostream>
+#include <sstream>
 
 extern "C" {
     #include "../../../libs/myteams/logging_server.h"
@@ -33,6 +35,14 @@ static bool parse_uuid_or_fail(const std::string &uuid_str, uuid_t out)
     return uuid_parse(uuid_str.c_str(), out) == 0;
 }
 
+static std::string uuid_to_string(const uuid_t uuid)
+{
+    char uuid_str[MAX_UUID_LENGTH];
+
+    uuid_unparse(uuid, uuid_str);
+    return std::string(uuid_str);
+}
+
 static bool has_ctx(const std::unordered_map<int, std::string> &ctx, int client_socket)
 {
     const auto it = ctx.find(client_socket);
@@ -52,6 +62,54 @@ static bool check_reply_field(const std::vector<std::string> &args)
     return args.size() == 2 && args[1].length() <= MAX_BODY_LENGTH;
 }
 
+static void send_event_to_user(Server &server, const std::string &user_uuid,
+    const std::string &payload)
+{
+    auto &socket_to_uuid = server.get_socket_to_uuid();
+
+    for (const auto &entry : socket_to_uuid) {
+        if (entry.second == user_uuid) {
+            server.send_response(entry.first, payload);
+        }
+    }
+}
+
+static void send_event_to_all_logged_users(Server &server, const std::string &payload)
+{
+    auto &socket_to_uuid = server.get_socket_to_uuid();
+
+    for (const auto &entry : socket_to_uuid) {
+        server.send_response(entry.first, payload);
+    }
+}
+
+static void send_event_to_team_subscribers(Server &server, const std::string &team_uuid,
+    const std::string &payload)
+{
+    auto &subscriptions = server.get_subscriptions_by_user();
+
+    for (const auto &entry : subscriptions) {
+        const auto &user_uuid = entry.first;
+        const auto &subs = entry.second;
+
+        if (std::find(subs.begin(), subs.end(), team_uuid) != subs.end()) {
+            send_event_to_user(server, user_uuid, payload);
+        }
+    }
+}
+
+static std::string make_event_payload(const std::string &type,
+    const std::vector<std::string> &fields)
+{
+    std::ostringstream payload;
+
+    payload << "EVENT\t" << type;
+    for (const auto &field : fields) {
+        payload << '\t' << field;
+    }
+    return payload.str();
+}
+
 static void create_team(Server &server, int client_socket, const std::vector<std::string> &args) {
     Team *team = new Team;
     uuid_generate(team->uuid);
@@ -65,6 +123,8 @@ static void create_team(Server &server, int client_socket, const std::vector<std
     std::string user_uuid = get_user_uuid(server, client_socket);
     server_event_team_created(u_str, team->name, user_uuid.c_str());
     server.send_response(client_socket, "Team created with UUID: " + std::string(u_str));
+    send_event_to_all_logged_users(server, make_event_payload("TEAM_CREATED",
+        {u_str, team->name, team->description}));
 }
 
 static void create_channel(Server &server, int client_socket, const std::vector<std::string> &args,
@@ -86,6 +146,8 @@ static void create_channel(Server &server, int client_socket, const std::vector<
     uuid_unparse(channel->uuid, channel_uuid);
     server_event_channel_created(team_uuid_str.c_str(), channel_uuid, channel->channel_name);
     server.send_response(client_socket, "Channel created with UUID: " + std::string(channel_uuid));
+    send_event_to_team_subscribers(server, team_uuid_str, make_event_payload("CHANNEL_CREATED",
+        {channel_uuid, channel->channel_name, channel->channel_description}));
 }
 
 static void create_thread(Server &server, int client_socket, const std::vector<std::string> &args,
@@ -114,6 +176,9 @@ static void create_thread(Server &server, int client_socket, const std::vector<s
         thread->thread_title, thread->thread_message);
     server.send_response(client_socket, "Thread created with UUID: " + std::string(thread_uuid) + 
         " " + user_uuid + " " + std::to_string(thread->timestamp));
+    send_event_to_team_subscribers(server, team_uuid_str, make_event_payload("THREAD_CREATED",
+        {thread_uuid, user_uuid, std::to_string(thread->timestamp),
+        thread->thread_title, thread->thread_message}));
 }
 
 static void create_reply(Server &server, int client_socket, const std::vector<std::string> &args,
@@ -139,6 +204,19 @@ static void create_reply(Server &server, int client_socket, const std::vector<st
     server_event_reply_created(thread_uuid_str.c_str(), user_uuid.c_str(), args[1].c_str());
     server.send_response(client_socket, "Reply created with UUID: " + std::string(reply_uuid) + 
         " " + user_uuid + " " + std::to_string(reply->timestamp));
+
+    std::string team_uuid;
+    for (const auto *thread : server.get_threads()) {
+        if (thread != nullptr && uuid_to_string(thread->uuid) == thread_uuid_str) {
+            team_uuid = uuid_to_string(thread->team_uuid);
+            break;
+        }
+    }
+    if (!team_uuid.empty()) {
+        send_event_to_team_subscribers(server, team_uuid,
+            make_event_payload("THREAD_REPLY_RECEIVED",
+            {team_uuid, thread_uuid_str, user_uuid, args[1]}));
+    }
 }
 
 void CmdCreate::execute(Server &server, int client_socket, const std::vector<std::string> &args)

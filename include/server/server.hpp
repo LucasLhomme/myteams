@@ -74,6 +74,10 @@ public:
     std::unordered_map<int, std::string> &get_use_team_context() { return _use_team_context; }
     std::unordered_map<int, std::string> &get_use_channel_context() { return _use_channel_context; }
     std::unordered_map<int, std::string> &get_use_thread_context() { return _use_thread_context; }
+    std::unordered_map<std::string, std::vector<std::string>> &get_subscriptions_by_user()
+    {
+      return _subscriptions_by_user;
+    }
 
     // Response handling
     /**
@@ -173,6 +177,8 @@ private:
     std::unordered_map<int, std::string> _use_channel_context;
     /// Maps client socket to selected thread UUID
     std::unordered_map<int, std::string> _use_thread_context;
+    /// Maps user UUID to subscribed team/channel UUIDs
+    std::unordered_map<std::string, std::vector<std::string>> _subscriptions_by_user;
 
     //  Data Storage
     std::vector<User *> _users;

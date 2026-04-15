@@ -59,6 +59,7 @@ namespace Cli {
 
         private:
             int _sockfd;
+            bool _is_connected;
             struct sockaddr_in _server_addr;
             std::string _input_buffer;
             std::string _output_buffer;

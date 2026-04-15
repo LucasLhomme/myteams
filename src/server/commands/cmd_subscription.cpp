@@ -47,8 +47,6 @@ static Team *get_team_by_uuid(Server &server, const std::string &team_uuid)
     return nullptr;
 }
 
-static std::unordered_map<std::string, std::vector<std::string>> g_subscriptions_by_user;
-
 void CmdSubscribe::execute(Server &server, int client_socket, const std::vector<std::string> &args)
 {
     try {
@@ -66,7 +64,8 @@ void CmdSubscribe::execute(Server &server, int client_socket, const std::vector<
             throw SubscriptionException("ERROR_UNKNOWN_TEAM: " + team_uuid_arg);
         }
 
-        auto &subs = g_subscriptions_by_user[user_uuid];
+        auto &subscriptions = server.get_subscriptions_by_user();
+        auto &subs = subscriptions[user_uuid];
 
         if (std::find(subs.begin(), subs.end(), team_uuid_arg) == subs.end()) {
             subs.push_back(team_uuid_arg);
@@ -104,10 +103,11 @@ void CmdSubscribed::execute(Server &server, int client_socket, const std::vector
 
         if (args.size() < 2) {
             std::string response = "";
-            const auto it = g_subscriptions_by_user.find(requester_uuid);
+            auto &subscriptions = server.get_subscriptions_by_user();
+            const auto it = subscriptions.find(requester_uuid);
             const std::vector<std::string> empty;
             const std::vector<std::string> &subs =
-                (it != g_subscriptions_by_user.end()) ? it->second : empty;
+                (it != subscriptions.end()) ? it->second : empty;
 
             for (const auto &team_uuid_str : subs) {
                 for (auto team : server.get_teams()) {
@@ -124,12 +124,13 @@ void CmdSubscribed::execute(Server &server, int client_socket, const std::vector
 
         std::string team_uuid_arg = args[1];
         std::string response = "";
+        auto &subscriptions = server.get_subscriptions_by_user();
         for (auto u : server.get_users()) {
             if (u == nullptr)
                 continue;
             const std::string user_uuid = uuid_to_string(u->uuid);
-            const auto it = g_subscriptions_by_user.find(user_uuid);
-            if (it == g_subscriptions_by_user.end())
+            const auto it = subscriptions.find(user_uuid);
+            if (it == subscriptions.end())
                 continue;
             const auto &subs = it->second;
             if (std::find(subs.begin(), subs.end(), team_uuid_arg) != subs.end()) {
@@ -160,7 +161,8 @@ void CmdUnsubscribe::execute(Server &server, int client_socket, const std::vecto
             throw SubscriptionException("ERROR: Not connected");
         }
 
-        auto &subs = g_subscriptions_by_user[user_uuid];
+        auto &subscriptions = server.get_subscriptions_by_user();
+        auto &subs = subscriptions[user_uuid];
         std::string team_uuid_arg = args[1];
         auto it = subs.begin();
         while (it != subs.end()) {
