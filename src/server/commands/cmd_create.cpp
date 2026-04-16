@@ -110,6 +110,15 @@ static std::string make_event_payload(const std::string &type,
     return payload.str();
 }
 
+static bool is_user_subscribed(Server &server, const std::string &user_uuid, const std::string &team_uuid)
+{
+    const auto &subscriptions = server.get_subscriptions_by_user();
+    auto it = subscriptions.find(user_uuid);
+    if (it == subscriptions.end())
+        return false;
+    return std::find(it->second.begin(), it->second.end(), team_uuid) != it->second.end();
+}
+
 static void create_team(Server &server, int client_socket, const std::vector<std::string> &args) {
     Team *team = new Team;
     uuid_generate(team->uuid);
@@ -129,6 +138,12 @@ static void create_team(Server &server, int client_socket, const std::vector<std
 
 static void create_channel(Server &server, int client_socket, const std::vector<std::string> &args,
     const std::string &team_uuid_str) {
+    std::string user_uuid = get_user_uuid(server, client_socket);
+    if (!is_user_subscribed(server, user_uuid, team_uuid_str)) {
+        std::cout << "create blocked due to the non subscription of the user" << std::endl;
+        server.send_response(client_socket, "Error: You can't create a channel if your not subscribe to the team");
+        return;
+    }
     Channel *channel = new Channel;
 
     if (!parse_uuid_or_fail(team_uuid_str, channel->team_uuid)) {
@@ -152,6 +167,12 @@ static void create_channel(Server &server, int client_socket, const std::vector<
 
 static void create_thread(Server &server, int client_socket, const std::vector<std::string> &args,
     const std::string &team_uuid_str, const std::string &channel_uuid_str) {
+    std::string user_uuid = get_user_uuid(server, client_socket);
+    if (!is_user_subscribed(server, user_uuid, team_uuid_str)) {
+        std::cout << "create blocked due to the non subscription of the user" << std::endl;
+        server.send_response(client_socket, "Error: You can't create a thread if your not subscribe to the team");
+        return;
+    }
     Thread *thread = new Thread;
 
     if (!parse_uuid_or_fail(team_uuid_str, thread->team_uuid) ||
@@ -162,7 +183,6 @@ static void create_thread(Server &server, int client_socket, const std::vector<s
     }
     uuid_generate(thread->uuid);
     thread->timestamp = time(nullptr);
-    std::string user_uuid = get_user_uuid(server, client_socket);
     std::strncpy(thread->creator_uuid, user_uuid.c_str(), MAX_UUID_LENGTH);
     thread->creator_uuid[MAX_UUID_LENGTH - 1] = '\0';
     std::strncpy(thread->thread_title, args[1].c_str(), MAX_NAME_LENGTH);
@@ -183,6 +203,19 @@ static void create_thread(Server &server, int client_socket, const std::vector<s
 
 static void create_reply(Server &server, int client_socket, const std::vector<std::string> &args,
     const std::string &thread_uuid_str) {
+    std::string user_uuid = get_user_uuid(server, client_socket);
+    std::string team_uuid_str;
+    for (const auto *thread : server.get_threads()) {
+        if (thread != nullptr && uuid_to_string(thread->uuid) == thread_uuid_str) {
+            team_uuid_str = uuid_to_string(thread->team_uuid);
+            break;
+        }
+    }
+    if (!team_uuid_str.empty() && !is_user_subscribed(server, user_uuid, team_uuid_str)) {
+        std::cout << "create blocked due to the non subscription of the user" << std::endl;
+        server.send_response(client_socket, "Error: You can't create a reply if your not subscribe to the team");
+        return;
+    }
     Reply *reply = new Reply;
 
     if (!parse_uuid_or_fail(thread_uuid_str, reply->thread_uuid)) {
@@ -192,7 +225,6 @@ static void create_reply(Server &server, int client_socket, const std::vector<st
     }
     uuid_generate(reply->uuid);
     reply->timestamp = time(nullptr);
-    std::string user_uuid = get_user_uuid(server, client_socket);
     std::strncpy(reply->creator_uuid, user_uuid.c_str(), MAX_UUID_LENGTH);
     reply->creator_uuid[MAX_UUID_LENGTH - 1] = '\0';
     std::strncpy(reply->reply_message, args[1].c_str(), MAX_DESCRIPTION_LENGTH);
@@ -205,17 +237,10 @@ static void create_reply(Server &server, int client_socket, const std::vector<st
     server.send_response(client_socket, "Reply created with UUID: " + std::string(reply_uuid) + 
         " " + user_uuid + " " + std::to_string(reply->timestamp));
 
-    std::string team_uuid;
-    for (const auto *thread : server.get_threads()) {
-        if (thread != nullptr && uuid_to_string(thread->uuid) == thread_uuid_str) {
-            team_uuid = uuid_to_string(thread->team_uuid);
-            break;
-        }
-    }
-    if (!team_uuid.empty()) {
-        send_event_to_team_subscribers(server, team_uuid,
+    if (!team_uuid_str.empty()) {
+        send_event_to_team_subscribers(server, team_uuid_str,
             make_event_payload("THREAD_REPLY_RECEIVED",
-            {team_uuid, thread_uuid_str, user_uuid, args[1]}));
+            {team_uuid_str, thread_uuid_str, user_uuid, args[1]}));
     }
 }
 

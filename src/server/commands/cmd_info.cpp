@@ -140,4 +140,5 @@ void CmdInfo::execute(Server &server, int client_socket, const std::vector<std::
 
     } catch (const std::exception &e) {
         std::cout << "[ERROR] " << e.what() << std::endl;
-    }}
+    }
+}
