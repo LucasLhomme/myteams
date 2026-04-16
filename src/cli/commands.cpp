@@ -70,7 +70,7 @@ std::vector<std::string> split_args(const std::string& command) {
                 args.push_back(current);
                 current.clear();
             }
-        } else {
+        } else if (c != '\r' && c != '\n') {
             current += c;
         }
     }
