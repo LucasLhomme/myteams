@@ -130,12 +130,6 @@ static void create_team(Server &server, int client_socket, const std::vector<std
     char u_str[MAX_UUID_LENGTH];
     uuid_unparse(team->uuid, u_str);
     std::string user_uuid = get_user_uuid(server, client_socket);
-    
-    // Auto-subscribe creator
-    if (!user_uuid.empty()) {
-        server.get_subscriptions_by_user()[user_uuid].push_back(std::string(u_str));
-    }
-    
     server_event_team_created(u_str, team->name, user_uuid.c_str());
     server.send_response(client_socket, "Team created with UUID: " + std::string(u_str));
     send_event_to_all_logged_users(server, make_event_payload("TEAM_CREATED",
