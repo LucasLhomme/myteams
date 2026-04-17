@@ -1,6 +1,6 @@
 /*
 ** EPITECH PROJECT, 2026
-** MY-TEAMS-1
+** my_teams
 ** File description:
 ** list
 */
@@ -12,18 +12,6 @@
 
 extern "C" {
 #include "../../../libs/myteams/logging_client.h"
-}
-
-static std::string trim_copy(const std::string &value)
-{
-    const size_t first = value.find_first_not_of(" \n\r\t");
-
-    if (first == std::string::npos) {
-        return "";
-    }
-    const size_t last = value.find_last_not_of(" \n\r\t");
-
-    return value.substr(first, last - first + 1);
 }
 
 static std::vector<std::string> split_tab_fields(const std::string &line)
@@ -40,57 +28,35 @@ static std::vector<std::string> split_tab_fields(const std::string &line)
 
 void ListCommand::execute(const std::string& input, Cli::Socket& socket, Cli::Context& context)
 {
+    (void)context;
     try {
-    socket.send_data(input + "\n");
-    std::string response = socket.receive_data();
+        socket.send_data(input);
 
-    if (response.find("ERROR_UNKNOWN_TEAM:") == 0) {
-        std::string uuid = trim_copy(response.substr(std::string("ERROR_UNKNOWN_TEAM:").size()));
-        client_error_unknown_team(uuid.c_str());
-    } else if (response.find("ERROR_UNKNOWN_CHANNEL:") == 0) {
-        std::string uuid = trim_copy(response.substr(std::string("ERROR_UNKNOWN_CHANNEL:").size()));
-        client_error_unknown_channel(uuid.c_str());
-    } else if (response.find("ERROR_UNKNOWN_THREAD:") == 0) {
-        std::string uuid = trim_copy(response.substr(std::string("ERROR_UNKNOWN_THREAD:").size()));
-        client_error_unknown_thread(uuid.c_str());
-    } else if (response.find("ERROR") != std::string::npos) {
-        client_error_unauthorized();
-    } else if (response == "No items available") {
-        return;
-    } else {
-        while (!response.empty()) {
-            std::istringstream iss(response);
-            std::string line;
+        while (true) {
+            std::string line = socket.receive_data(100);
+            if (line.empty()) break;
 
-            while (std::getline(iss, line)) {
-                if (line.empty()) {
-                    continue;
-                }
-
-                const std::vector<std::string> fields = split_tab_fields(line);
-                if (fields.empty()) {
-                    continue;
-                }
-
-                if (fields[0] == "TEAM" && fields.size() >= 4) {
-                    client_print_teams(fields[1].c_str(), fields[2].c_str(), fields[3].c_str());
-                } else if (fields[0] == "CHANNEL" && fields.size() >= 4) {
-                    client_team_print_channels(fields[1].c_str(), fields[2].c_str(), fields[3].c_str());
-                } else if (fields[0] == "THREAD" && fields.size() >= 6) {
-                    client_channel_print_threads(
-                        fields[1].c_str(), fields[2].c_str(), static_cast<time_t>(std::stoll(fields[3])),
-                        fields[4].c_str(), fields[5].c_str());
-                } else if (fields[0] == "REPLY" && fields.size() >= 5) {
-                    client_thread_print_replies(
-                        fields[1].c_str(), fields[2].c_str(), static_cast<time_t>(std::stoll(fields[3])),
-                        fields[4].c_str());
-                }
+            if (line.find("ERROR") != std::string::npos || line.find("Unauthorized") != std::string::npos) {
+                client_error_unauthorized();
+                return;
             }
 
-            response = socket.receive_data(0);
-        }
-    }
+            std::vector<std::string> fields = split_tab_fields(line);
+            if (fields.empty()) continue;
 
+            if (fields[0] == "TEAM" && fields.size() >= 4) {
+                client_print_teams(fields[1].c_str(), fields[2].c_str(), fields[3].c_str());
+            } else if (fields[0] == "CHANNEL" && fields.size() >= 4) {
+                client_team_print_channels(fields[1].c_str(), fields[2].c_str(), fields[3].c_str());
+            } else if (fields[0] == "THREAD" && fields.size() >= 6) {
+                client_channel_print_threads(fields[1].c_str(), fields[2].c_str(), 
+                                           (time_t)std::stoll(fields[3]), fields[4].c_str(), fields[5].c_str());
+            } else if (fields[0] == "REPLY" && fields.size() >= 5) {
+                client_thread_print_replies(fields[1].c_str(), fields[2].c_str(),
+                                           (time_t)std::stoll(fields[3]), fields[4].c_str());
+            }
+        }
     } catch (const std::exception &e) {
         std::cout << "[ERROR] " << e.what() << std::endl;
-    }}
+    }
+}

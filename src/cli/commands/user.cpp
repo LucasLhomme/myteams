@@ -26,9 +26,17 @@ void UserCommand::execute(const std::string& input, Cli::Socket& socket, Cli::Co
         return;
     }
     // STATUS: 1 = online, 0 = offline
-    std::istringstream iss(response);
+    std::istringstream entry(response);
+    std::string first;
+    entry >> first;
+    
     std::string uuid, name, status_str;
-    iss >> uuid >> name >> status_str;
+    if (first == "USER") {
+        entry >> uuid >> name >> status_str;
+    } else {
+        uuid = first;
+        entry >> name >> status_str;
+    }
     
     if (!uuid.empty() && !name.empty()) {
         int status = (status_str == "1" || status_str == "online") ? 1 : 0;

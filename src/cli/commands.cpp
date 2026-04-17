@@ -108,8 +108,7 @@ void CommandHandler::process_command(const std::string& command, Cli::Socket& so
     std::string cmd_name = extract_command_name(args[0]);
     auto it = _commands.find(cmd_name);
     if (it != _commands.end()) {
-        std::string recomposed = recompose_args(args);
-        execute_command(cmd_name, recomposed, socket, context);
+        execute_command(cmd_name, command, socket, context);
     } else {
         std::cout << "Unknown command" << std::endl;
     }
