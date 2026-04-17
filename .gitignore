@@ -11,4 +11,4 @@ latex/
 *.pdf
 server_save.txt
 server_save.json
-bonus/*
+myteams_gui

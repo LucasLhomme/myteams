@@ -70,11 +70,16 @@ void Server::extract_and_process_commands(int client_socket) {
 
     if (args.empty()) continue;
 
-    // Standard Protocol: command arguments like names/descriptions MUST be quoted
-    if (args[0] == "/login" && args.size() >= 2 && !quoted_args[1]) {
-        send_response(client_socket, "ERROR: /login username must be quoted");
-        continue;
+    // Standard Protocol: ALL command arguments MUST be quoted
+    bool all_quoted = true;
+    for (size_t i = 1; i < args.size(); ++i) {
+        if (!quoted_args[i]) {
+            send_response(client_socket, "ERROR: All arguments must be quoted");
+            all_quoted = false;
+            break;
+        }
     }
+    if (!all_quoted) continue;
 
     std::cout << "Processing: " << args[0] << std::endl;
     
