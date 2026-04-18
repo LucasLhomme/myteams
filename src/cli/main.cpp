@@ -11,8 +11,8 @@
 void print_help()
 {
     std::cout << "USAGE: ./myteams_cli ip port" << std::endl;
-    std::cout << "ip is the server ip address on which the server socket listens" << std::endl;
-    std::cout << "port is the port number on which the server socket listens" << std::endl;
+    std::cout << "\tip is the server ip address on which the server socket listens" << std::endl;
+    std::cout << "\tport is the port number on which the server socket listens" << std::endl;
 }
 
 bool is_ip(std::string ip)

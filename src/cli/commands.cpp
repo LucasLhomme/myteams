@@ -132,21 +132,44 @@ std::vector<std::string> split_args(const std::string& command) {
     std::vector<std::string> args;
     std::string current;
     bool in_quotes = false;
+    bool starting_quote = false;
+    size_t i = 0;
 
-    for (char c : command) {
-        if (c == '"') {
-            in_quotes = !in_quotes;
-        } else if (c == ' ' && !in_quotes) {
-            if (!current.empty()) {
-                args.push_back(current);
-                current.clear();
-            }
-        } else if (c != '\r' && c != '\n') {
-            current += c;
-        }
+    while (i < command.length() && std::isspace(command[i])) i++;
+    while (i < command.length() && !std::isspace(command[i])) {
+        current += command[i++];
     }
-    if (!current.empty())
+    if (current.empty()) return {};
+    args.push_back(current);
+    current.clear();
+
+    while (i < command.length()) {
+        while (i < command.length() && std::isspace(command[i])) i++;
+        if (i >= command.length()) break;
+
+        if (command[i] != '"') {
+            std::cout << "Error: Argument must be quoted." << std::endl;
+            return {};
+        }
+
+        i++;
+        in_quotes = true;
+        while (i < command.length() && in_quotes) {
+            if (command[i] == '"') {
+                in_quotes = false;
+            } else {
+                current += command[i];
+            }
+            i++;
+        }
+
+        if (in_quotes) {
+            std::cout << "Error: Missing closing quote." << std::endl;
+            return {};
+        }
         args.push_back(current);
+        current.clear();
+    }
     return args;
 }
 

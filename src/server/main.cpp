@@ -18,11 +18,21 @@ void signal_handler(int sig)
     server_running = false;
 }
 
+void print_help()
+{
+    std::cout << "USAGE: ./myteams_server port" << std::endl;
+    std::cout << "\tport is the port number on which the server socket listens." << std::endl;
+}
+
 int main(int ac, char **av)
 {
     try {
+        if (ac == 2 && (std::string(av[1]) == "--help" || std::string(av[1]) == "-h")) {
+            print_help();
+            return 0;
+        }
         if (ac != 2) {
-            std::cout << "Usage: ./my_teams <port>" << std::endl;
+            print_help();
             return 84;
         }
         int port = std::atoi(av[1]);
