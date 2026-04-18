@@ -118,6 +118,14 @@ void Server::remove_client(int client_socket)
                 }
             }
             server_event_user_logged_out(user_uuid.c_str());
+            
+            std::string username = "";
+            auto name_it = _socket_to_name.find(client_socket);
+            if (name_it != _socket_to_name.end()) {
+                username = name_it->second;
+            }
+            broadcast_event("EVENT\tLOGGED_OUT\t" + user_uuid + "\t" + username, client_socket);
+            
             _socket_to_uuid.erase(it_uuid);
         }
         

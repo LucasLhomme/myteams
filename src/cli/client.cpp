@@ -29,60 +29,6 @@ std::array<pollfd, 2> Cli::ClientPollState::to_array() const
     return {stdin_fd, server_fd};
 }
 
-static std::vector<std::string> split_tab_fields(const std::string &line)
-{
-    std::vector<std::string> fields;
-    std::string field;
-    std::istringstream stream(line);
-
-    while (std::getline(stream, field, '\t')) {
-        fields.push_back(field);
-    }
-    return fields;
-}
-
-static bool handle_async_event(const std::string &line)
-{
-    const std::vector<std::string> fields = split_tab_fields(line);
-
-    if (fields.size() < 2 || fields[0] != "EVENT") {
-        return false;
-    }
-
-    if (fields[1] == "LOGGED_IN" && fields.size() >= 4) {
-        client_event_logged_in(fields[2].c_str(), fields[3].c_str());
-        return true;
-    }
-    if (fields[1] == "LOGGED_OUT" && fields.size() >= 4) {
-        client_event_logged_out(fields[2].c_str(), fields[3].c_str());
-        return true;
-    }
-    if (fields[1] == "MESSAGE_RECEIVED" && fields.size() >= 4) {
-        client_event_private_message_received(fields[2].c_str(), fields[3].c_str());
-        return true;
-    }
-    if (fields[1] == "TEAM_CREATED" && fields.size() >= 5) {
-        client_event_team_created(fields[2].c_str(), fields[3].c_str(), fields[4].c_str());
-        return true;
-    }
-    if (fields[1] == "CHANNEL_CREATED" && fields.size() >= 5) {
-        client_event_channel_created(fields[2].c_str(), fields[3].c_str(), fields[4].c_str());
-        return true;
-    }
-    if (fields[1] == "THREAD_CREATED" && fields.size() >= 7) {
-        const time_t timestamp = static_cast<time_t>(std::stoll(fields[4]));
-
-        client_event_thread_created(fields[2].c_str(), fields[3].c_str(), timestamp,
-            fields[5].c_str(), fields[6].c_str());
-        return true;
-    }
-    if (fields[1] == "THREAD_REPLY_RECEIVED" && fields.size() >= 6) {
-        client_event_thread_reply_received(fields[2].c_str(), fields[3].c_str(),
-            fields[4].c_str(), fields[5].c_str());
-        return true;
-    }
-    return false;
-}
 
 namespace Cli {
     void Client::launch_client(std::string ip, std::string port) {
