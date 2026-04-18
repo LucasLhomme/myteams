@@ -27,7 +27,6 @@ void LogoutCommand::execute(const std::string& input, Cli::Socket& socket, Cli::
         if (!uuid.empty()) {
             context.reset();
             client_event_logged_out(uuid.c_str(), username.empty() ? "" : username.c_str());
-            context.set_should_quit(true);
             return;
         }
     } else if (response.find("Error") != std::string::npos) {

@@ -22,31 +22,58 @@ static std::string trim_copy(const std::string &value)
     return value.substr(first, last - first + 1);
 }
 
-void CreateCommand::execute(const std::string& input, Cli::Socket& socket, Cli::Context& context)
-{
-    try {
+void CreateCommand::execute(const std::string &input, Cli::Socket &socket,
+                           Cli::Context &context) {
+  try {
     const std::vector<std::string> args = split_args(input);
-    socket.send_data(input + "\n");
+
+    if (context.get_team_uuid().empty()) {
+      if (args.size() != 3) {
+        std::cout << "Usage: /create [\"team_name\"] [\"team_description\"]"
+                  << std::endl;
+        return;
+      }
+    } else if (context.get_channel_uuid().empty()) {
+      if (args.size() != 3) {
+        std::cout << "Usage: /create [\"channel_name\"] [\"channel_description\"]"
+                  << std::endl;
+        return;
+      }
+    } else if (context.get_thread_uuid().empty()) {
+      if (args.size() != 3) {
+        std::cout << "Usage: /create [\"thread_title\"] [\"thread_message\"]"
+                  << std::endl;
+        return;
+      }
+    } else {
+      if (args.size() != 2) {
+        std::cout << "Usage: /create [\"comment_body\"]" << std::endl;
+        return;
+      }
+    }
+
+    socket.send_data(input);
     std::string response = socket.receive_data();
-    
-    bool is_error = (response.find("ERROR") != std::string::npos || response.find("Error") != std::string::npos);
+
+    bool is_error = (response.find("ERROR") != std::string::npos ||
+                     response.find("Error") != std::string::npos);
 
     if (is_error) {
-        if (response.find("UNKNOWN_TEAM") != std::string::npos) {
-            size_t pos = response.find(":") + 1;
-            client_error_unknown_team(trim_copy(response.substr(pos)).c_str());
-        } else if (response.find("UNKNOWN_CHANNEL") != std::string::npos) {
-            size_t pos = response.find(":") + 1;
-            client_error_unknown_channel(trim_copy(response.substr(pos)).c_str());
-        } else if (response.find("UNKNOWN_THREAD") != std::string::npos) {
-            size_t pos = response.find(":") + 1;
-            client_error_unknown_thread(trim_copy(response.substr(pos)).c_str());
-        } else if (response.find("ALREADY_EXIST") != std::string::npos) {
-            client_error_already_exist();
-        } else {
-            client_error_unauthorized();
-        }
-        return;
+      if (response.find("UNKNOWN_TEAM") != std::string::npos) {
+        size_t pos = response.find(":") + 1;
+        client_error_unknown_team(trim_copy(response.substr(pos)).c_str());
+      } else if (response.find("UNKNOWN_CHANNEL") != std::string::npos) {
+        size_t pos = response.find(":") + 1;
+        client_error_unknown_channel(trim_copy(response.substr(pos)).c_str());
+      } else if (response.find("UNKNOWN_THREAD") != std::string::npos) {
+        size_t pos = response.find(":") + 1;
+        client_error_unknown_thread(trim_copy(response.substr(pos)).c_str());
+      } else if (response.find("ALREADY_EXIST") != std::string::npos) {
+        client_error_already_exist();
+      } else {
+        std::cout << response << std::endl;
+      }
+      return;
     }
 
     if (args.size() < 2) return;

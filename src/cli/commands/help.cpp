@@ -8,10 +8,18 @@
 #include "../../../include/cli/commands/help.hpp"
 #include <iostream>
 
-void HelpCommand::execute(const std::string& input, Cli::Socket& socket, Cli::Context& context)
-{
-    try {
-    socket.send_data(input + "\n");
+void HelpCommand::execute(const std::string &input, Cli::Socket &socket,
+                         Cli::Context &context) {
+  try {
+    const std::vector<std::string> args = split_args(input);
+
+    if (args.size() != 1) {
+      std::cout << "Usage: /help" << std::endl;
+      return;
+    }
+
+    (void)context;
+    socket.send_data(input);
     std::string response = socket.receive_data();
     std::cout << response << std::endl;
 

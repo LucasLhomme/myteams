@@ -25,10 +25,17 @@ static std::string trim_copy(const std::string &value)
     return value.substr(first, last - first + 1);
 }
 
-void SubscribedCommand::execute(const std::string& input, Cli::Socket& socket, Cli::Context& context)
-{
-    try {
-    socket.send_data(input + "\n");
+void SubscribedCommand::execute(const std::string &input, Cli::Socket &socket,
+                               Cli::Context &context) {
+  try {
+    const std::vector<std::string> args = split_args(input);
+
+    if (args.size() > 2) {
+      std::cout << "Usage: /subscribed ?[\"team_uuid\"]" << std::endl;
+      return;
+    }
+
+    socket.send_data(input);
     while (true) {
         std::string line = CommandHandler::receive_response(socket, 500);
         if (line.empty()) break;

@@ -15,11 +15,18 @@ extern "C" {
 }
 
 
-void UsersCommand::execute(const std::string& input, Cli::Socket& socket, Cli::Context& context)
-{
-    (void)context;
-    try {
-        socket.send_data(input);
+void UsersCommand::execute(const std::string &input, Cli::Socket &socket,
+                           Cli::Context &context) {
+  (void)context;
+  try {
+    const std::vector<std::string> args = split_args(input);
+
+    if (args.size() != 1) {
+      std::cout << "Usage: /users" << std::endl;
+      return;
+    }
+
+    socket.send_data(input);
         
         // Read all available lines (server sends all users in one go, usually followed by quiescence)
         // We wait a bit (100ms) for the server to finish sending.

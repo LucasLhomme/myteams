@@ -39,11 +39,18 @@ static std::vector<std::string> split_tab_fields(const std::string &line)
     return fields;
 }
 
-void InfoCommand::execute(const std::string& input, Cli::Socket& socket, Cli::Context& context)
-{
-    try {
+void InfoCommand::execute(const std::string &input, Cli::Socket &socket,
+                         Cli::Context &context) {
+  try {
+    const std::vector<std::string> args = split_args(input);
+
+    if (args.size() != 1) {
+      std::cout << "Usage: /info" << std::endl;
+      return;
+    }
+
     (void)context;
-    socket.send_data(input + "\n");
+    socket.send_data(input);
     std::string response = socket.receive_data();
 
     if (response.find("ERROR_UNKNOWN_TEAM:") == 0) {

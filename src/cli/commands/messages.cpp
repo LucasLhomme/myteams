@@ -61,27 +61,40 @@ static bool parse_messages_line(const std::string &line,
     return true;
 }
 
-void MessagesCommand::execute(const std::string& input, Cli::Socket& socket, Cli::Context& context)
-{
-    try {
+void MessagesCommand::execute(const std::string &input, Cli::Socket &socket,
+                              Cli::Context &context) {
+  try {
+    const std::vector<std::string> args = split_args(input);
+
+    if (args.size() != 2) {
+      std::cout << "Usage: /messages [\"user_uuid\"]" << std::endl;
+      return;
+    }
+
     (void)context;
     socket.send_data(input);
     while (true) {
-        std::string line = CommandHandler::receive_response(socket, 500);
-        if (line.empty()) break;
-        if (line == "\r" || line == "\n" || line == "") continue;
+      std::string line = CommandHandler::receive_response(socket, 500);
+      if (line.empty())
+        break;
+      if (line == "\r" || line == "\n" || line == "")
+        continue;
 
-        if (line.find("ERROR_UNKNOWN_USER:") == 0) {
-            std::string uuid = line.substr(19);
-            uuid.erase(uuid.find_last_not_of(" \n\r\t") + 1);
-            client_error_unknown_user(uuid.c_str());
-            return;
-        }
+      if (line.find("ERROR_UNKNOWN_USER:") == 0) {
+        std::string uuid = line.substr(19);
+        uuid.erase(uuid.find_last_not_of(" \n\r\t") + 1);
+        client_error_unknown_user(uuid.c_str());
+        return;
+      }
 
-        if (line.find("ERROR") != std::string::npos ||
-            line.find("No message") != std::string::npos) {
-            continue;
-        }
+      if (line.find("ERROR") != std::string::npos) {
+        std::cout << line << std::endl;
+        return;
+      }
+
+      if (line.find("No message") != std::string::npos) {
+        continue;
+      }
 
         std::string sender_uuid;
         std::string message;

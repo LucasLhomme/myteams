@@ -27,7 +27,13 @@ static std::string trim_copy(const std::string &value) {
 void UseCommand::execute(const std::string &input, Cli::Socket &socket,
                          Cli::Context &context) {
   try {
-    socket.send_data(input + "\n");
+    const std::vector<std::string> args = split_args(input);
+    if (args.size() > 4) {
+      std::cout << "Usage: /use ?[\"team_uuid\"] ?[\"channel_uuid\"] ?[\"thread_uuid\"]" << std::endl;
+      return;
+    }
+
+    socket.send_data(input);
     std::string response = socket.receive_data();
 
     if (response.find("ERROR_UNKNOWN_TEAM:") == 0) {
@@ -43,7 +49,7 @@ void UseCommand::execute(const std::string &input, Cli::Socket &socket,
           response.substr(std::string("ERROR_UNKNOWN_THREAD:").size()));
       client_error_unknown_thread(uuid.c_str());
     } else if (response.find("ERROR") != std::string::npos) {
-      client_error_unauthorized();
+      std::cout << response << std::endl;
     } else {
       const std::vector<std::string> args = split_args(input);
       if (args.size() > 1) context.set_team(args[1]);

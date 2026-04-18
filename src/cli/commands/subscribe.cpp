@@ -24,17 +24,25 @@ static std::string trim_copy(const std::string &value)
     return value.substr(first, last - first + 1);
 }
 
-void SubscribeCommand::execute(const std::string& input, Cli::Socket& socket, Cli::Context& context)
-{
-    try {
-    socket.send_data(input + "\n");
+void SubscribeCommand::execute(const std::string &input, Cli::Socket &socket,
+                                Cli::Context &context) {
+  try {
+    const std::vector<std::string> args = split_args(input);
+
+    if (args.size() != 2) {
+      std::cout << "Usage: /subscribe [\"team_uuid\"]" << std::endl;
+      return;
+    }
+
+    socket.send_data(input);
     std::string response = socket.receive_data();
-    
+
     if (response.find("ERROR_UNKNOWN_TEAM:") == 0) {
-        std::string uuid = trim_copy(response.substr(std::string("ERROR_UNKNOWN_TEAM:").size()));
-        client_error_unknown_team(uuid.c_str());
+      std::string uuid =
+          trim_copy(response.substr(std::string("ERROR_UNKNOWN_TEAM:").size()));
+      client_error_unknown_team(uuid.c_str());
     } else if (response.find("ERROR") != std::string::npos) {
-        client_error_unauthorized();
+      std::cout << response << std::endl;
     } else {
         std::string clean_resp = response;
         if (clean_resp.find("Success ") == 0)
