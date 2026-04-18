@@ -35,7 +35,11 @@ void UserCommand::execute(const std::string &input, Cli::Socket &socket,
     }
 
     if (response.find("ERROR") != std::string::npos) {
-      std::cout << response << std::endl;
+      if (response.find("Unauthorized") != std::string::npos) {
+        client_error_unauthorized();
+      } else {
+        std::cout << response << std::endl;
+      }
       return;
     }
     // STATUS: 1 = online, 0 = offline

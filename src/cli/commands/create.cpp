@@ -70,6 +70,9 @@ void CreateCommand::execute(const std::string &input, Cli::Socket &socket,
         client_error_unknown_thread(trim_copy(response.substr(pos)).c_str());
       } else if (response.find("ALREADY_EXIST") != std::string::npos) {
         client_error_already_exist();
+      } else if (response.find("Unauthorized") != std::string::npos ||
+                 response.find("subscribe") != std::string::npos) {
+        client_error_unauthorized();
       } else {
         std::cout << response << std::endl;
       }

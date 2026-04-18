@@ -88,7 +88,11 @@ void MessagesCommand::execute(const std::string &input, Cli::Socket &socket,
       }
 
       if (line.find("ERROR") != std::string::npos) {
-        std::cout << line << std::endl;
+        if (line.find("Unauthorized") != std::string::npos) {
+          client_error_unauthorized();
+        } else {
+          std::cout << line << std::endl;
+        }
         return;
       }
 

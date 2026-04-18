@@ -141,14 +141,14 @@ static void create_channel(Server &server, int client_socket, const std::vector<
     std::string user_uuid = get_user_uuid(server, client_socket);
     if (!is_user_subscribed(server, user_uuid, team_uuid_str)) {
         std::cout << "create blocked due to the non subscription of the user" << std::endl;
-        server.send_response(client_socket, "Error: You can't create a channel if your not subscribe to the team");
+        server.send_response(client_socket, "ERROR: Unauthorized. You can't create a channel if you're not subscribed to the team");
         return;
     }
     Channel *channel = new Channel;
 
     if (!parse_uuid_or_fail(team_uuid_str, channel->team_uuid)) {
         delete channel;
-        server.send_response(client_socket, "Invalid team context, use /use again");
+        server.send_response(client_socket, "ERROR: Invalid team context, use /use again");
         return;
     }
     uuid_generate(channel->uuid);
@@ -170,7 +170,7 @@ static void create_thread(Server &server, int client_socket, const std::vector<s
     std::string user_uuid = get_user_uuid(server, client_socket);
     if (!is_user_subscribed(server, user_uuid, team_uuid_str)) {
         std::cout << "create blocked due to the non subscription of the user" << std::endl;
-        server.send_response(client_socket, "Error: You can't create a thread if your not subscribe to the team");
+        server.send_response(client_socket, "ERROR: Unauthorized. You can't create a thread if you're not subscribed to the team");
         return;
     }
     Thread *thread = new Thread;
@@ -178,7 +178,7 @@ static void create_thread(Server &server, int client_socket, const std::vector<s
     if (!parse_uuid_or_fail(team_uuid_str, thread->team_uuid) ||
         !parse_uuid_or_fail(channel_uuid_str, thread->channel_uuid)) {
         delete thread;
-        server.send_response(client_socket, "Invalid team/channel context, use /use again");
+        server.send_response(client_socket, "ERROR: Invalid team/channel context, use /use again");
         return;
     }
     uuid_generate(thread->uuid);
@@ -213,14 +213,14 @@ static void create_reply(Server &server, int client_socket, const std::vector<st
     }
     if (!team_uuid_str.empty() && !is_user_subscribed(server, user_uuid, team_uuid_str)) {
         std::cout << "create blocked due to the non subscription of the user" << std::endl;
-        server.send_response(client_socket, "Error: You can't create a reply if your not subscribe to the team");
+        server.send_response(client_socket, "ERROR: Unauthorized. You can't create a reply if you're not subscribed to the team");
         return;
     }
     Reply *reply = new Reply;
 
     if (!parse_uuid_or_fail(thread_uuid_str, reply->thread_uuid)) {
         delete reply;
-        server.send_response(client_socket, "Invalid thread context, use /use again");
+        server.send_response(client_socket, "ERROR: Invalid thread context, use /use again");
         return;
     }
     uuid_generate(reply->uuid);
@@ -262,7 +262,7 @@ void CmdCreate::execute(Server &server, int client_socket, const std::vector<std
 
     if (args.size() == 3) {
         if (!check_two_fields(args)) {
-            server.send_response(client_socket, "Invalid name/description length");
+            server.send_response(client_socket, "ERROR: Invalid name/description length");
             return;
         }
         if (!has_team) {
@@ -277,11 +277,11 @@ void CmdCreate::execute(Server &server, int client_socket, const std::vector<std
     if (args.size() == 2) {
         if (!has_thread) {
             server.send_response(client_socket,
-                "Reply creation requires /use team_uuid channel_uuid thread_uuid");
+                "ERROR: Reply creation requires /use team_uuid channel_uuid thread_uuid");
             return;
         }
         if (!check_reply_field(args)) {
-            server.send_response(client_socket, "Invalid reply body length");
+            server.send_response(client_socket, "ERROR: Invalid reply body length");
             return;
         }
         create_reply(server, client_socket, args, current_thread[client_socket]);

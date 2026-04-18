@@ -51,7 +51,7 @@ void CmdSubscribe::execute(Server &server, int client_socket, const std::vector<
 {
     try {
         if (args.size() < 2) {
-            throw SubscriptionException("Usage: /subscribe [team_uuid]");
+            throw SubscriptionException("ERROR: Usage: /subscribe [team_uuid]");
         }
 
         const std::string user_uuid = get_user_uuid_from_socket(server, client_socket);
@@ -153,7 +153,7 @@ void CmdUnsubscribe::execute(Server &server, int client_socket, const std::vecto
 {
     try {
         if (args.size() < 2) {
-            throw SubscriptionException("Usage: /unsubscribe [team_uuid]");
+            throw SubscriptionException("ERROR: Usage: /unsubscribe [team_uuid]");
         }
 
         const std::string user_uuid = get_user_uuid_from_socket(server, client_socket);

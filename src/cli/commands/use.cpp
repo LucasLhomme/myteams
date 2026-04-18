@@ -49,7 +49,11 @@ void UseCommand::execute(const std::string &input, Cli::Socket &socket,
           response.substr(std::string("ERROR_UNKNOWN_THREAD:").size()));
       client_error_unknown_thread(uuid.c_str());
     } else if (response.find("ERROR") != std::string::npos) {
-      std::cout << response << std::endl;
+      if (response.find("Unauthorized") != std::string::npos) {
+        client_error_unauthorized();
+      } else {
+        std::cout << response << std::endl;
+      }
     } else {
       const std::vector<std::string> args = split_args(input);
       if (args.size() > 1) context.set_team(args[1]);
