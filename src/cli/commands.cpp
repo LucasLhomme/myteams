@@ -4,23 +4,94 @@
 ** File description:
 ** commands
 */
-#include "./cli/commands.hpp"
-#include "./cli/commands/help.hpp"
-#include "./cli/commands/login.hpp"
-#include "./cli/commands/logout.hpp"
-#include "./cli/commands/users.hpp"
-#include "./cli/commands/user.hpp"
-#include "./cli/commands/send.hpp"
-#include "./cli/commands/messages.hpp"
-#include "./cli/commands/subscribe.hpp"
-#include "./cli/commands/subscribed.hpp"
-#include "./cli/commands/unsubscribe.hpp"
-#include "./cli/commands/use.hpp"
-#include "./cli/commands/create.hpp"
-#include "./cli/commands/list.hpp"
-#include "./cli/commands/info.hpp"
+#include "../../include/cli/commands.hpp"
+#include "../../include/cli/commands/help.hpp"
+#include "../../include/cli/commands/login.hpp"
+#include "../../include/cli/commands/logout.hpp"
+#include "../../include/cli/commands/users.hpp"
+#include "../../include/cli/commands/user.hpp"
+#include "../../include/cli/commands/send.hpp"
+#include "../../include/cli/commands/messages.hpp"
+#include "../../include/cli/commands/subscribe.hpp"
+#include "../../include/cli/commands/subscribed.hpp"
+#include "../../include/cli/commands/unsubscribe.hpp"
+#include "../../include/cli/commands/use.hpp"
+#include "../../include/cli/commands/create.hpp"
+#include "../../include/cli/commands/list.hpp"
+#include "../../include/cli/commands/info.hpp"
 #include <iostream>
 #include <vector>
+#include <sstream>
+
+extern "C" {
+#include "../../libs/myteams/logging_client.h"
+}
+
+static std::vector<std::string> split_tab_fields(const std::string &line)
+{
+    std::vector<std::string> fields;
+    std::string field;
+    std::istringstream stream(line);
+
+    while (std::getline(stream, field, '\t')) {
+        fields.push_back(field);
+    }
+    return fields;
+}
+
+bool CommandHandler::handle_async_event(const std::string &line)
+{
+    const std::vector<std::string> fields = split_tab_fields(line);
+
+    if (fields.size() < 2 || fields[0] != "EVENT") {
+        return false;
+    }
+
+    if (fields[1] == "LOGGED_IN" && fields.size() >= 4) {
+        client_event_logged_in(fields[2].c_str(), fields[3].c_str());
+        return true;
+    }
+    if (fields[1] == "LOGGED_OUT" && fields.size() >= 4) {
+        client_event_logged_out(fields[2].c_str(), fields[3].c_str());
+        return true;
+    }
+    if (fields[1] == "MESSAGE_RECEIVED" && fields.size() >= 4) {
+        client_event_private_message_received(fields[2].c_str(), fields[3].c_str());
+        return true;
+    }
+    if (fields[1] == "TEAM_CREATED" && fields.size() >= 5) {
+        client_event_team_created(fields[2].c_str(), fields[3].c_str(), fields[4].c_str());
+        return true;
+    }
+    if (fields[1] == "CHANNEL_CREATED" && fields.size() >= 5) {
+        client_event_channel_created(fields[2].c_str(), fields[3].c_str(), fields[4].c_str());
+        return true;
+    }
+    if (fields[1] == "THREAD_CREATED" && fields.size() >= 7) {
+        const time_t timestamp = static_cast<time_t>(std::stoll(fields[4]));
+        client_event_thread_created(fields[2].c_str(), fields[3].c_str(), timestamp,
+            fields[5].c_str(), fields[6].c_str());
+        return true;
+    }
+    if (fields[1] == "THREAD_REPLY_RECEIVED" && fields.size() >= 6) {
+        client_event_thread_reply_received(fields[2].c_str(), fields[3].c_str(),
+            fields[4].c_str(), fields[5].c_str());
+        return true;
+    }
+    return false;
+}
+
+std::string CommandHandler::receive_response(Cli::Socket& socket, int timeout_ms)
+{
+    while (true) {
+        std::string line = socket.receive_data(timeout_ms);
+        if (line.empty())
+            return "";
+        if (!handle_async_event(line)) {
+            return line;
+        }
+    }
+}
 
 CommandHandler::CommandHandler()
 {

@@ -30,18 +30,24 @@ void ListCommand::execute(const std::string& input, Cli::Socket& socket, Cli::Co
 {
     (void)context;
     try {
-        socket.send_data(input);
+        socket.send_data(input + "\n");
 
         while (true) {
-            std::string line = socket.receive_data(100);
+            std::string line = CommandHandler::receive_response(socket, 500);
             if (line.empty()) break;
+            if (line == "\r" || line == "\n" || line == "") continue;
 
             if (line.find("ERROR") != std::string::npos || line.find("Unauthorized") != std::string::npos) {
                 client_error_unauthorized();
                 return;
             }
 
-            std::vector<std::string> fields = split_tab_fields(line);
+            std::vector<std::string> fields;
+            std::string field;
+            std::istringstream stream(line);
+            while (std::getline(stream, field, '\t')) {
+                fields.push_back(field);
+            }
             if (fields.empty()) continue;
 
             if (fields[0] == "TEAM" && fields.size() >= 4) {

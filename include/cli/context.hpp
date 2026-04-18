@@ -21,6 +21,7 @@ namespace Cli {
         std::string _team_uuid;
         std::string _channel_uuid;
         std::string _thread_uuid;
+        bool _should_quit = false;
 
     public:
         Context() = default;
@@ -53,6 +54,10 @@ namespace Cli {
             _channel_uuid.clear();
             _thread_uuid.clear();
         }
+
+        // Exit control
+        void set_should_quit(bool quit) { _should_quit = quit; }
+        bool should_quit() const { return _should_quit; }
 
         // Clear navigation context
         void reset_navigation() {

@@ -27,7 +27,6 @@ extern bool server_running;
 Server::Server(int port) : _port(port)
 {
     load_state();
-    _pollfds.push_back(make_pollfd(STDIN_FILENO));
 }
 
 /**
@@ -87,6 +86,19 @@ void Server::send_response(int client_socket, const std::string &message)
     }
 }
 
+void Server::broadcast_event(const std::string &message, int exclude_socket)
+{
+    try {
+        for (const auto &[socket, uuid] : _socket_to_uuid) {
+            if (socket != exclude_socket) {
+                send_response(socket, message);
+            }
+        }
+    } catch (const std::exception &e) {
+        std::cout << "[ERROR] broadcast_event exception: " << e.what() << std::endl;
+    }
+}
+
 /**
  * @brief Remove client from all tracking structures
  * @param client_socket Socket to remove
@@ -96,7 +108,16 @@ void Server::remove_client(int client_socket)
     try {
         auto it_uuid = _socket_to_uuid.find(client_socket);
         if (it_uuid != _socket_to_uuid.end()) {
-            server_event_user_logged_out(it_uuid->second.c_str());
+            std::string user_uuid = it_uuid->second;
+            for (auto &user : _users) {
+                char uuid_str[37];
+                uuid_unparse(user->uuid, uuid_str);
+                if (std::string(uuid_str) == user_uuid) {
+                    user->is_online = false;
+                    break;
+                }
+            }
+            server_event_user_logged_out(user_uuid.c_str());
             _socket_to_uuid.erase(it_uuid);
         }
         
@@ -183,7 +204,6 @@ void Server::cleanup() {
       _server_socket = -1;
     }
     _pollfds.clear();
-    _pollfds.push_back(make_pollfd(STDIN_FILENO));
   } catch (const std::exception &e) {
     std::cout << "[ERROR] cleanup exception: " << e.what() << std::endl;
   }
@@ -215,11 +235,6 @@ int Server::start() {
         if (_pollfds[i].revents & POLLIN) {
           if (_pollfds[i].fd == _server_socket) {
             accept_client();
-          } else if (_pollfds[i].fd == STDIN_FILENO) {
-            char buf[1];
-            if (::read(STDIN_FILENO, buf, 1) <= 0) {
-              server_running = false;
-            }
           } else {
             removed = handle_client_data(i);
           }

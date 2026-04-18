@@ -16,18 +16,18 @@ extern "C" {
 void LogoutCommand::execute(const std::string& input, Cli::Socket& socket, Cli::Context& context)
 {
     try {
-    socket.send_data(input + "\n");
+    socket.send_data(input);
     std::string response = socket.receive_data();
     
-    if (response.find("USER_LOGGED_OUT ") == 0 || response.find("LOGOUT_DATA ") == 0) {
-        const size_t payload_start = response.find(' ') + 1;
-        std::istringstream iss(response.substr(payload_start));
-        std::string uuid, username;
-        iss >> uuid >> username;
+    if (response.find("USER_LOGGED_OUT") != std::string::npos || response.find("LOGOUT_DATA") != std::string::npos) {
+        std::istringstream iss(response);
+        std::string tag, uuid, username;
+        iss >> tag >> uuid >> username;
         
-        if (!uuid.empty() && !username.empty()) {
+        if (!uuid.empty()) {
             context.reset();
-            client_event_logged_out(uuid.c_str(), username.c_str());
+            client_event_logged_out(uuid.c_str(), username.empty() ? "" : username.c_str());
+            context.set_should_quit(true);
             return;
         }
     } else if (response.find("Error") != std::string::npos) {

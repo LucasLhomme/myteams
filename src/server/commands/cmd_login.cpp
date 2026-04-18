@@ -56,6 +56,7 @@ void CmdLogin::execute(Server &server, int client_socket, const std::vector<std:
     server.get_socket_to_uuid()[client_socket] = uuid_str;
 
     server_event_user_logged_in(uuid_str);
+    server.broadcast_event("EVENT\tLOGGED_IN\t" + std::string(uuid_str) + "\t" + user->username, client_socket);
     server.send_response(client_socket, "Login success: " + std::string(uuid_str));
     server.save_state();
 

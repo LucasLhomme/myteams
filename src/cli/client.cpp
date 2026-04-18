@@ -49,6 +49,18 @@ static bool handle_async_event(const std::string &line)
         return false;
     }
 
+    if (fields[1] == "LOGGED_IN" && fields.size() >= 4) {
+        client_event_logged_in(fields[2].c_str(), fields[3].c_str());
+        return true;
+    }
+    if (fields[1] == "LOGGED_OUT" && fields.size() >= 4) {
+        client_event_logged_out(fields[2].c_str(), fields[3].c_str());
+        return true;
+    }
+    if (fields[1] == "MESSAGE_RECEIVED" && fields.size() >= 4) {
+        client_event_private_message_received(fields[2].c_str(), fields[3].c_str());
+        return true;
+    }
     if (fields[1] == "TEAM_CREATED" && fields.size() >= 5) {
         client_event_team_created(fields[2].c_str(), fields[3].c_str(), fields[4].c_str());
         return true;
@@ -113,7 +125,7 @@ namespace Cli {
                         if (line.empty() || !client_socket.is_connected()) {
                             break;
                         }
-                        if (!handle_async_event(line)) {
+                        if (!CommandHandler::handle_async_event(line)) {
                             std::cout << line << std::endl;
                         }
                     }
@@ -130,6 +142,9 @@ namespace Cli {
                     }
                     try {
                         command_handler.process_command(input, client_socket, _context);
+                        if (_context.should_quit()) {
+                            break;
+                        }
                     } catch (const Exception &e) {
                         std::cout << e.what() << std::endl;
                         break;

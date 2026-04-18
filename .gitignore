@@ -12,3 +12,6 @@ latex/
 server_save.txt
 server_save.json
 myteams_gui
+tests/*
+subject.txt
+rapport.md

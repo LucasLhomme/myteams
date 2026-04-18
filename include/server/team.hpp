@@ -13,23 +13,18 @@
 #include "constants.hpp"
 
 class ATeam {
-  protected:
+  public:
     uuid_t uuid;
     char name[MAX_NAME_LENGTH];
     char description[MAX_DESCRIPTION_LENGTH];
-  public:
     virtual ~ATeam() = default;
 };
 
 struct Team : public ATeam {
-  uuid_t uuid;
-  char name[MAX_NAME_LENGTH];
-  char description[MAX_DESCRIPTION_LENGTH];
 };
 
 struct Channel : public ATeam {
   uuid_t team_uuid;
-  uuid_t uuid;
   char channel_name[MAX_NAME_LENGTH];
   char channel_description[MAX_DESCRIPTION_LENGTH];
 };
@@ -37,7 +32,6 @@ struct Channel : public ATeam {
 struct Thread : public ATeam {
   uuid_t team_uuid;
   uuid_t channel_uuid;
-  uuid_t uuid;
   char creator_uuid[MAX_UUID_LENGTH];
   char thread_title[MAX_NAME_LENGTH];
   char thread_message[MAX_DESCRIPTION_LENGTH];
@@ -46,7 +40,6 @@ struct Thread : public ATeam {
 
 struct Reply : public ATeam {
   uuid_t thread_uuid;
-  uuid_t uuid;
   char creator_uuid[MAX_UUID_LENGTH];
   char reply_message[MAX_DESCRIPTION_LENGTH];
   time_t timestamp;

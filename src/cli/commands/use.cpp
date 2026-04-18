@@ -13,46 +13,46 @@ extern "C" {
 #include "../../../libs/myteams/logging_client.h"
 }
 
-static std::string trim_copy(const std::string &value)
-{
-    const size_t first = value.find_first_not_of(" \n\r\t");
+static std::string trim_copy(const std::string &value) {
+  const size_t first = value.find_first_not_of(" \n\r\t");
 
-    if (first == std::string::npos) {
-        return "";
-    }
-    const size_t last = value.find_last_not_of(" \n\r\t");
+  if (first == std::string::npos) {
+    return "";
+  }
+  const size_t last = value.find_last_not_of(" \n\r\t");
 
-    return value.substr(first, last - first + 1);
+  return value.substr(first, last - first + 1);
 }
 
-void UseCommand::execute(const std::string& input, Cli::Socket& socket, Cli::Context& context)
-{
-    try {
+void UseCommand::execute(const std::string &input, Cli::Socket &socket,
+                         Cli::Context &context) {
+  try {
     socket.send_data(input + "\n");
     std::string response = socket.receive_data();
-    
+
     if (response.find("ERROR_UNKNOWN_TEAM:") == 0) {
-        std::string uuid = trim_copy(response.substr(std::string("ERROR_UNKNOWN_TEAM:").size()));
-        client_error_unknown_team(uuid.c_str());
+      std::string uuid =
+          trim_copy(response.substr(std::string("ERROR_UNKNOWN_TEAM:").size()));
+      client_error_unknown_team(uuid.c_str());
     } else if (response.find("ERROR_UNKNOWN_CHANNEL:") == 0) {
-        std::string uuid = trim_copy(response.substr(std::string("ERROR_UNKNOWN_CHANNEL:").size()));
-        client_error_unknown_channel(uuid.c_str());
+      std::string uuid = trim_copy(
+          response.substr(std::string("ERROR_UNKNOWN_CHANNEL:").size()));
+      client_error_unknown_channel(uuid.c_str());
     } else if (response.find("ERROR_UNKNOWN_THREAD:") == 0) {
-        std::string uuid = trim_copy(response.substr(std::string("ERROR_UNKNOWN_THREAD:").size()));
-        client_error_unknown_thread(uuid.c_str());
+      std::string uuid = trim_copy(
+          response.substr(std::string("ERROR_UNKNOWN_THREAD:").size()));
+      client_error_unknown_thread(uuid.c_str());
     } else if (response.find("ERROR") != std::string::npos) {
-        client_error_unauthorized();
+      client_error_unauthorized();
     } else {
-        std::istringstream iss(input);
-        std::string cmd, team_uuid, channel_uuid, thread_uuid;
-        iss >> cmd >> team_uuid >> channel_uuid >> thread_uuid;
-        
-        if (!team_uuid.empty()) context.set_team(team_uuid);
-        if (!channel_uuid.empty()) context.set_channel(channel_uuid);
-        if (!thread_uuid.empty()) context.set_thread(thread_uuid);
-        std::cout << response << std::endl;
+      const std::vector<std::string> args = split_args(input);
+      if (args.size() > 1) context.set_team(args[1]);
+      if (args.size() > 2) context.set_channel(args[2]);
+      if (args.size() > 3) context.set_thread(args[3]);
+      std::cout << response << std::endl;
     }
 
-    } catch (const std::exception &e) {
-        std::cout << "[ERROR] " << e.what() << std::endl;
-    }}
+  } catch (const std::exception &e) {
+    std::cout << "[ERROR] " << e.what() << std::endl;
+  }
+}

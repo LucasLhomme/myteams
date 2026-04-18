@@ -82,7 +82,7 @@ void CmdSubscribe::execute(Server &server, int client_socket, const std::vector<
 
         server_event_user_subscribed(team_uuid_arg.c_str(), user_uuid.c_str());
 
-        std::string response = user_uuid + " " + team_uuid_arg;
+        std::string response = "Success " + user_uuid + " " + team_uuid_arg;
         server.send_response(client_socket, response);
     } catch (const SubscriptionException &e) {
         server.send_response(client_socket, e.what());
@@ -187,7 +187,7 @@ void CmdUnsubscribe::execute(Server &server, int client_socket, const std::vecto
 
         server_event_user_unsubscribed(team_uuid_arg.c_str(), user_uuid.c_str());
 
-        std::string response = user_uuid + " " + team_uuid_arg;
+        std::string response = "Success " + user_uuid + " " + team_uuid_arg;
         server.send_response(client_socket, response);
     } catch (const SubscriptionException &e) {
         server.send_response(client_socket, e.what());

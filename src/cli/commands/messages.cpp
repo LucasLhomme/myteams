@@ -65,37 +65,31 @@ void MessagesCommand::execute(const std::string& input, Cli::Socket& socket, Cli
 {
     try {
     (void)context;
-    socket.send_data(input + "\n");
-    std::string response = socket.receive_data();
+    socket.send_data(input);
+    while (true) {
+        std::string line = CommandHandler::receive_response(socket, 500);
+        if (line.empty()) break;
+        if (line == "\r" || line == "\n" || line == "") continue;
 
-    if (response.find("ERROR_UNKNOWN_USER:") == 0) {
-        std::string uuid = response.substr(19);
-        uuid.erase(uuid.find_last_not_of(" \n\r\t") + 1);
-        client_error_unknown_user(uuid.c_str());
-        return;
-    }
-
-    while (!response.empty()) {
-        std::istringstream iss(response);
-        std::string line;
-
-        while (std::getline(iss, line)) {
-            if (line.empty() || line.find("ERROR") != std::string::npos ||
-                line.find("No message") != std::string::npos) {
-                continue;
-            }
-
-            std::string sender_uuid;
-            std::string message;
-            time_t timestamp = 0;
-
-            if (!parse_messages_line(line, sender_uuid, timestamp, message)) {
-                continue;
-            }
-            client_private_message_print_messages(sender_uuid.c_str(), timestamp, message.c_str());
+        if (line.find("ERROR_UNKNOWN_USER:") == 0) {
+            std::string uuid = line.substr(19);
+            uuid.erase(uuid.find_last_not_of(" \n\r\t") + 1);
+            client_error_unknown_user(uuid.c_str());
+            return;
         }
 
-        response = socket.receive_data(0);
+        if (line.find("ERROR") != std::string::npos ||
+            line.find("No message") != std::string::npos) {
+            continue;
+        }
+
+        std::string sender_uuid;
+        std::string message;
+        time_t timestamp = 0;
+
+        if (parse_messages_line(line, sender_uuid, timestamp, message)) {
+            client_private_message_print_messages(sender_uuid.c_str(), timestamp, message.c_str());
+        }
     }
 
     } catch (const std::exception &e) {

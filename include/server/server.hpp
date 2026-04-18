@@ -86,6 +86,7 @@ public:
      * @param message Message to send
      */
     void send_response(int client_socket, const std::string &message);
+    void broadcast_event(const std::string &message, int exclude_socket = -1);
 
     // Persistence
     void save_state();

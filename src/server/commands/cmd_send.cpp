@@ -69,7 +69,7 @@ void CmdSend::execute(Server &server, int client_socket, const std::vector<std::
     pm->body[MAX_BODY_LENGTH - 1] = '\0';
     pm->timestamp = time(nullptr);
     server.get_private_messages().push_back(pm);
-    server.send_response(reciver_socket, "Private message from " + sender_name + " (" + sender_uuid + "): " + message);
+    server.send_response(reciver_socket, "EVENT\tMESSAGE_RECEIVED\t" + sender_uuid + "\t" + message);
     server_event_private_message_sended(sender_uuid.c_str(), args[1].c_str(), message.c_str());
     server.send_response(client_socket, "Message sent to " + args[1] + ": " + message);
     server.save_state();

@@ -32,6 +32,9 @@ public:
     
     void process_command(const std::string& command, Cli::Socket& socket, Cli::Context& context);
     void execute_command(const std::string& command, const std::string& input, Cli::Socket& socket, Cli::Context& context);
+
+    static bool handle_async_event(const std::string& line);
+    static std::string receive_response(Cli::Socket& socket, int timeout_ms = 5000);
 };
 
 std::vector<std::string> split_args(const std::string& command);

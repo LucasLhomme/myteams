@@ -33,15 +33,15 @@ void CmdLogout::execute(Server &server, int client_socket, const std::vector<std
             }
         }
         server_event_user_logged_out(uuid_str.c_str());
-        server.save_state();
+        server.broadcast_event("EVENT\tLOGGED_OUT\t" + uuid_str + "\t" + username_str, client_socket);
+        server.send_response(client_socket, "USER_LOGGED_OUT " + uuid_str + " " + username_str);
+        
         server.get_socket_to_uuid().erase(it);
         server.get_socket_to_name().erase(client_socket);
         server.get_use_team_context().erase(client_socket);
         server.get_use_channel_context().erase(client_socket);
         server.get_use_thread_context().erase(client_socket);
-    }
-    if (!uuid_str.empty()) {
-        server.send_response(client_socket, "USER_LOGGED_OUT " + uuid_str + " " + username_str);
+        server.save_state();
     } else {
         server.send_response(client_socket, "USER_LOGGED_OUT UNKNOWN UNKNOWN");
     }

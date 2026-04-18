@@ -15,11 +15,11 @@ extern "C" {
 void LoginCommand::execute(const std::string& input, Cli::Socket& socket, Cli::Context& context)
 {
     try {
-    socket.send_data(input + "\n");
+    socket.send_data(input);
     std::string response = socket.receive_data();
     
-    if (response.find("Login success:") == 0) {
-        std::string uuid = response.substr(14);
+    if (response.find("Login success:") != std::string::npos) {
+        std::string uuid = response.substr(response.find(':') + 1);
         uuid.erase(0, uuid.find_first_not_of(" \n\r\t"));
         uuid.erase(uuid.find_last_not_of("\n\r\t") + 1);
         const std::vector<std::string> args = split_args(input);
