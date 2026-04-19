@@ -42,7 +42,7 @@ void CmdLogout::execute(Server &server, int client_socket, [[maybe_unused]] cons
         server.get_use_thread_context().erase(client_socket);
         server.save_state();
     } else {
-        server.send_response(client_socket, "USER_LOGGED_OUT UNKNOWN UNKNOWN");
+        server.send_response(client_socket, "ERROR: Unauthorized");
     }
 
     } catch (const std::exception &e) {

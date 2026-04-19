@@ -29,7 +29,7 @@ void LogoutCommand::execute(const std::string& input, Cli::Socket& socket, Cli::
             client_event_logged_out(uuid.c_str(), username.empty() ? "" : username.c_str());
             return;
         }
-    } else if (response.find("Error") != std::string::npos) {
+    } else if (response.find("ERROR") != std::string::npos || response.find("Error") != std::string::npos || response.find("Unauthorized") != std::string::npos) {
         client_error_unauthorized();
     }
 
