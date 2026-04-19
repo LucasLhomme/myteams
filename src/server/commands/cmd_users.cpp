@@ -17,9 +17,8 @@ static std::string uuid_to_string(const uuid_t uuid) {
     return std::string(uuid_str);
 }
 
-void CmdUsers::execute(Server &server, int client_socket, const std::vector<std::string> &args) {
+void CmdUsers::execute(Server &server, int client_socket, [[maybe_unused]] const std::vector<std::string> &args) {
     try {
-        (void)args;
         const auto& users = server.get_users();
         std::ostringstream response;
         for (const auto& user : users) {

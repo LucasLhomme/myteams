@@ -12,9 +12,8 @@
 
 bool server_running = true;
 
-void signal_handler(int sig)
+void signal_handler([[maybe_unused]] int sig)
 {
-    (void)sig;
     server_running = false;
 }
 

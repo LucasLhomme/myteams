@@ -16,8 +16,7 @@ extern "C" {
 
 
 void UsersCommand::execute(const std::string &input, Cli::Socket &socket,
-                           Cli::Context &context) {
-  (void)context;
+                           [[maybe_unused]] Cli::Context &context) {
   try {
     const std::vector<std::string> args = split_args(input);
 
@@ -30,7 +29,7 @@ void UsersCommand::execute(const std::string &input, Cli::Socket &socket,
         
         // Read all available lines (server sends all users in one go, usually followed by quiescence)
         // We wait a bit (100ms) for the server to finish sending.
-        bool found_any = false;
+        [[maybe_unused]] bool found_any = false;
         while (true) {
             std::string line = CommandHandler::receive_response(socket, 500);
             if (line.empty()) break;

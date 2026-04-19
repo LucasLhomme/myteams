@@ -132,7 +132,7 @@ std::vector<std::string> split_args(const std::string& command) {
     std::vector<std::string> args;
     std::string current;
     bool in_quotes = false;
-    bool starting_quote = false;
+    [[maybe_unused]] bool starting_quote = false;
     size_t i = 0;
 
     while (i < command.length() && std::isspace(command[i])) i++;

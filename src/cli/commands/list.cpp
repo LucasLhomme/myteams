@@ -14,7 +14,7 @@ extern "C" {
 #include "../../../libs/myteams/logging_client.h"
 }
 
-static std::vector<std::string> split_tab_fields(const std::string &line)
+[[maybe_unused]] static std::vector<std::string> split_tab_fields(const std::string &line)
 {
     std::vector<std::string> fields;
     std::string field;
@@ -27,8 +27,7 @@ static std::vector<std::string> split_tab_fields(const std::string &line)
 }
 
 void ListCommand::execute(const std::string &input, Cli::Socket &socket,
-                         Cli::Context &context) {
-  (void)context;
+                         [[maybe_unused]] Cli::Context &context) {
   try {
     const std::vector<std::string> args = split_args(input);
 

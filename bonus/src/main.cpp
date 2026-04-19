@@ -66,8 +66,7 @@ std::vector<std::string> split(const std::string& s, char delim) {
     return tokens;
 }
 
-int main(int argc, char** argv) {
-    (void)argc; (void)argv;
+int main([[maybe_unused]] int argc, [[maybe_unused]] char** argv) {
     if (SDL_Init(SDL_INIT_VIDEO) < 0 || TTF_Init() < 0) return 1;
 
     SDL_Window* win = SDL_CreateWindow("MyTeams - Explorer Professional", 

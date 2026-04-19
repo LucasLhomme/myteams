@@ -25,7 +25,7 @@ static std::string trim_copy(const std::string &value)
 }
 
 void SubscribeCommand::execute(const std::string &input, Cli::Socket &socket,
-                                Cli::Context &context) {
+                                [[maybe_unused]] Cli::Context &context) {
   try {
     const std::vector<std::string> args = split_args(input);
 

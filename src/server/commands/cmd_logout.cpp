@@ -14,9 +14,8 @@ extern "C" {
 
 }
 
-void CmdLogout::execute(Server &server, int client_socket, const std::vector<std::string> &args) {
+void CmdLogout::execute(Server &server, int client_socket, [[maybe_unused]] const std::vector<std::string> &args) {
     try {
-    (void)args;
     auto it = server.get_socket_to_uuid().find(client_socket);
     std::string uuid_str = "";
     std::string username_str = "";

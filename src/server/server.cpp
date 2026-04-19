@@ -201,8 +201,7 @@ bool Server::handle_client_data(size_t poll_index) {
 
 void Server::cleanup() {
   try {
-    for (const auto &[client_socket, buffer] : _client_buffers) {
-      (void)buffer;
+    for ([[maybe_unused]] const auto &[client_socket, buffer] : _client_buffers) {
       ::close(client_socket);
     }
     _client_buffers.clear();

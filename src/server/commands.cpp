@@ -30,7 +30,7 @@ void Server::extract_and_process_commands(int client_socket) {
     std::vector<std::string> args;
     std::string current;
     bool in_quotes = false;
-    bool last_was_quoted = false;
+    [[maybe_unused]] bool last_was_quoted = false;
     std::vector<bool> quoted_args;
 
     for (size_t i = 0; i < line.length(); ++i) {
