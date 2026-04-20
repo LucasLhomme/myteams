@@ -50,16 +50,23 @@ static bool has_ctx(const std::unordered_map<int, std::string> &ctx, int client_
     return it != ctx.end() && !it->second.empty();
 }
 
-static bool check_two_fields(const std::vector<std::string> &args)
+static bool check_team_channel_fields(const std::vector<std::string> &args)
 {
     return args.size() == 3 &&
-        args[1].length() <= MAX_NAME_LENGTH &&
-        args[2].length() <= MAX_DESCRIPTION_LENGTH;
+        args[1].length() < MAX_NAME_LENGTH &&
+        args[2].length() < MAX_DESCRIPTION_LENGTH;
+}
+
+static bool check_thread_fields(const std::vector<std::string> &args)
+{
+    return args.size() == 3 &&
+        args[1].length() < MAX_NAME_LENGTH &&
+        args[2].length() < MAX_BODY_LENGTH;
 }
 
 static bool check_reply_field(const std::vector<std::string> &args)
 {
-    return args.size() == 2 && args[1].length() <= MAX_BODY_LENGTH;
+    return args.size() == 2 && args[1].length() < MAX_BODY_LENGTH;
 }
 
 static void send_event_to_user(Server &server, const std::string &user_uuid,
@@ -183,12 +190,12 @@ static void create_thread(Server &server, int client_socket, const std::vector<s
     }
     uuid_generate(thread->uuid);
     thread->timestamp = time(nullptr);
-    std::strncpy(thread->creator_uuid, user_uuid.c_str(), MAX_UUID_LENGTH);
+    std::strncpy(thread->creator_uuid, user_uuid.c_str(), MAX_UUID_LENGTH - 1);
     thread->creator_uuid[MAX_UUID_LENGTH - 1] = '\0';
-    std::strncpy(thread->thread_title, args[1].c_str(), MAX_NAME_LENGTH);
-    std::strncpy(thread->thread_message, args[2].c_str(), MAX_DESCRIPTION_LENGTH);
+    std::strncpy(thread->thread_title, args[1].c_str(), MAX_NAME_LENGTH - 1);
+    std::strncpy(thread->thread_message, args[2].c_str(), MAX_BODY_LENGTH - 1);
     thread->thread_title[MAX_NAME_LENGTH - 1] = '\0';
-    thread->thread_message[MAX_DESCRIPTION_LENGTH - 1] = '\0';
+    thread->thread_message[MAX_BODY_LENGTH - 1] = '\0';
     server.get_threads().push_back(thread);
     char thread_uuid[MAX_UUID_LENGTH];
     uuid_unparse(thread->uuid, thread_uuid);
@@ -205,11 +212,17 @@ static void create_reply(Server &server, int client_socket, const std::vector<st
     const std::string &thread_uuid_str) {
     std::string user_uuid = get_user_uuid(server, client_socket);
     std::string team_uuid_str;
+    bool thread_exists = false;
     for (const auto *thread : server.get_threads()) {
         if (thread != nullptr && uuid_to_string(thread->uuid) == thread_uuid_str) {
             team_uuid_str = uuid_to_string(thread->team_uuid);
+            thread_exists = true;
             break;
         }
+    }
+    if (!thread_exists) {
+        server.send_response(client_socket, "ERROR: UNKNOWN_THREAD:" + thread_uuid_str);
+        return;
     }
     if (!team_uuid_str.empty() && !is_user_subscribed(server, user_uuid, team_uuid_str)) {
         std::cout << "create blocked due to the non subscription of the user" << std::endl;
@@ -225,22 +238,22 @@ static void create_reply(Server &server, int client_socket, const std::vector<st
     }
     uuid_generate(reply->uuid);
     reply->timestamp = time(nullptr);
-    std::strncpy(reply->creator_uuid, user_uuid.c_str(), MAX_UUID_LENGTH);
+    std::strncpy(reply->creator_uuid, user_uuid.c_str(), MAX_UUID_LENGTH - 1);
     reply->creator_uuid[MAX_UUID_LENGTH - 1] = '\0';
-    std::strncpy(reply->reply_message, args[1].c_str(), MAX_DESCRIPTION_LENGTH);
-    reply->reply_message[MAX_DESCRIPTION_LENGTH - 1] = '\0';
+    std::strncpy(reply->reply_message, args[1].c_str(), MAX_BODY_LENGTH - 1);
+    reply->reply_message[MAX_BODY_LENGTH - 1] = '\0';
     server.get_replies().push_back(reply);
     
     char reply_uuid[MAX_UUID_LENGTH];
     uuid_unparse(reply->uuid, reply_uuid);
-    server_event_reply_created(thread_uuid_str.c_str(), user_uuid.c_str(), args[1].c_str());
+    server_event_reply_created(thread_uuid_str.c_str(), user_uuid.c_str(), reply->reply_message);
     server.send_response(client_socket, "Reply created with UUID: " + std::string(reply_uuid) + 
         " " + user_uuid + " " + std::to_string(reply->timestamp));
 
     if (!team_uuid_str.empty()) {
         send_event_to_team_subscribers(server, team_uuid_str,
             make_event_payload("THREAD_REPLY_RECEIVED",
-            {team_uuid_str, thread_uuid_str, user_uuid, args[1]}));
+            {team_uuid_str, thread_uuid_str, user_uuid, reply->reply_message}));
     }
 }
 
@@ -261,15 +274,23 @@ void CmdCreate::execute(Server &server, int client_socket, const std::vector<std
     }
 
     if (args.size() == 3) {
-        if (!check_two_fields(args)) {
-            server.send_response(client_socket, "ERROR: Invalid name/description length");
-            return;
-        }
         if (!has_team) {
+            if (!check_team_channel_fields(args)) {
+                server.send_response(client_socket, "ERROR: Invalid team name/description length");
+                return;
+            }
             create_team(server, client_socket, args);
         } else if (!has_channel) {
+            if (!check_team_channel_fields(args)) {
+                server.send_response(client_socket, "ERROR: Invalid channel name/description length");
+                return;
+            }
             create_channel(server, client_socket, args, current_team[client_socket]);
         } else {
+            if (!check_thread_fields(args)) {
+                server.send_response(client_socket, "ERROR: Invalid thread title/message length");
+                return;
+            }
             create_thread(server, client_socket, args, current_team[client_socket],
                 current_channel[client_socket]);
         }

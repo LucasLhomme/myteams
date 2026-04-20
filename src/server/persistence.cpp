@@ -374,9 +374,9 @@ void Server::load_state()
                     uuid_parse(cu.c_str(), th->channel_uuid);
                     uuid_parse(uu.c_str(), th->uuid);
                     std::strncpy(th->thread_title, t.c_str(), MAX_NAME_LENGTH - 1);
-                    std::strncpy(th->thread_message, m.c_str(), MAX_DESCRIPTION_LENGTH - 1);
+                    std::strncpy(th->thread_message, m.c_str(), MAX_BODY_LENGTH - 1);
                     th->thread_title[MAX_NAME_LENGTH - 1] = '\0';
-                    th->thread_message[MAX_DESCRIPTION_LENGTH - 1] = '\0';
+                    th->thread_message[MAX_BODY_LENGTH - 1] = '\0';
                     _threads.push_back(th);
                 });
             } else if (key == "replies") {
@@ -388,8 +388,8 @@ void Server::load_state()
                     r->timestamp = expect_kv_num(json, i, "timestamp");
                     uuid_parse(tu.c_str(), r->thread_uuid);
                     uuid_parse(uu.c_str(), r->uuid);
-                    std::strncpy(r->reply_message, m.c_str(), MAX_DESCRIPTION_LENGTH - 1);
-                    r->reply_message[MAX_DESCRIPTION_LENGTH - 1] = '\0';
+                    std::strncpy(r->reply_message, m.c_str(), MAX_BODY_LENGTH - 1);
+                    r->reply_message[MAX_BODY_LENGTH - 1] = '\0';
                     _replies.push_back(r);
                 });
             } else if (key == "private_messages") {

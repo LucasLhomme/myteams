@@ -34,14 +34,14 @@ struct Thread : public ATeam {
   uuid_t channel_uuid;
   char creator_uuid[MAX_UUID_LENGTH];
   char thread_title[MAX_NAME_LENGTH];
-  char thread_message[MAX_DESCRIPTION_LENGTH];
+  char thread_message[MAX_BODY_LENGTH];
   time_t timestamp;
 };
 
 struct Reply : public ATeam {
   uuid_t thread_uuid;
   char creator_uuid[MAX_UUID_LENGTH];
-  char reply_message[MAX_DESCRIPTION_LENGTH];
+  char reply_message[MAX_BODY_LENGTH];
   time_t timestamp;
 };
 
