@@ -19,48 +19,44 @@ Table of Contents
    9. Example Dialogues
    10. References
 
-   Diagramme d’échange Client/Serveur
-   -----------------------------------
-------------------------------------------
-
    +--------+                                 +--------+
    | Client |                                 | Server |
    +--------+                                 +--------+
-      |                                         |
-      |------ Connexion TCP ------------------->|   (1. Ouverture de la connexion réseau)
-      |                                         |
-      |------ /login "user_name" -------------->|   (2. Demande d'authentification)
-      |                                         |
-      |<----- client_event_logged_in -----------|   (3. Confirmation de login, UUID et nom reçus)
-      |                                         |
-      |------ /use "team_uuid" ---------------->|   (4. Sélection du contexte équipe)
-      |<----- Réponse: contexte changé ---------|   (5. Accusé de réception du contexte)
-      |                                         |
-      |------ /list --------------------------->|   (6. Demande de liste d'entités)
-      |<----- Réponse: liste d'entités ---------|   (7. Liste des teams/channels/threads)
-      |                                         |
-      |------ /info --------------------------->|   (8. Demande d'informations sur l'entité courante)
-      |<----- Réponse: infos entité ------------|   (9. Détails sur team/channel/thread/user)
-      |                                         |
-      |------ /send "user_uuid" "msg" --------->|   (10. Envoi d'un message privé)
-      |<----- client_event_private_message ------|   (11. Notification de réception du message)
-      |                                         |
-      |------ /create "team_name" "desc" ------>|   (12. Création d'une équipe)
-      |<----- client_event_team_created --------|   (13. Notification de création à tous les clients)
-      |                                         |
-      |------ /subscribe "team_uuid" ---------->|   (14. Abonnement à une équipe)
-      |<----- client_print_subscribed ----------|   (15. Confirmation d'abonnement)
-      |                                         |
-      |------ /logout ------------------------->|   (16. Déconnexion)
-      |<----- client_event_logged_out ----------|   (17. Notification de logout)
-      |                                         |
+      |                                          |
+      |------ TCP Connection ------------------->|   (1. Network connection opening)
+      |                                          |
+      |------ /login "user_name" --------------->|   (2. Authentication request)
+      |                                          |
+      |<----- client_event_logged_in ------------|   (3. Login confirmation, UUID and name received)
+      |                                          |
+      |------ /use "team_uuid" ----------------->|   (4. Team context selection)
+      |<----- Response: context changed ---------|   (5. Context acknowledgment)
+      |                                          |
+      |------ /list ---------------------------->|   (6. Entity list request)
+      |<----- Response: entity list -------------|   (7. List of teams/channels/threads)
+      |                                          |
+      |------ /info ---------------------------->|   (8. Information request on current entity)
+      |<----- Response: entity info -------------|   (9. Details on team/channel/thread/user)
+      |                                          |
+      |------ /send "user_uuid" "msg" ---------->|   (10. Private message sending)
+      |<----- client_event_private_message ------|   (11. Message receipt notification)
+      |                                          |
+      |------ /create "team_name" "desc" ------->|   (12. Team creation)
+      |<----- client_event_team_created ---------|   (13. Creation notification to all clients)
+      |                                          |
+      |------ /subscribe "team_uuid" ----------->|   (14. Team subscription)
+      |<----- client_print_subscribed -----------|   (15. Subscription confirmation)
+      |                                          |
+      |------ /logout -------------------------->|   (16. Logout)
+      |<----- client_event_logged_out -----------|   (17. Logout notification)
+      |                                          |
 
-Légende :
-  - Les flèches --> indiquent les requêtes du client vers le serveur.
-  - Les flèches <-- indiquent les réponses ou événements du serveur vers le client.
-  - Chaque étape est numérotée et commentée pour clarifier le rôle de l'échange.
-  - Les commandes /use, /list, /info, /create, /send, /subscribe sont des exemples, d'autres existent (voir section 3).
-  - Les événements client_event_* sont des notifications asynchrones envoyées par le serveur.
+Legend:
+- Arrows (-->) indicate requests from the client to the server.
+- Arrows (<--) indicate responses or events from the server to the client.
+- Each step is numbered and commented to clarify the purpose of the exchange.
+- Commands such as /use, /list, /info, /create, /send, /subscribe are examples; others exist (see section 3).
+- client_event_* entries are asynchronous notifications sent by the server.
 
 1. Introduction
 
