@@ -1,44 +1,43 @@
-# myTeams — Messagerie client/serveur en C++
+# myTeams — Client/Server messaging app in C++
 
-Application de messagerie type **Slack / TeamSpeak**, développée en équipe à Epitech.
-Un serveur réseau gère plusieurs clients simultanés qui peuvent rejoindre des équipes,
-discuter dans des canaux, ouvrir des fils de discussion et s'échanger des messages privés,
-en temps réel.
+A **Slack / TeamSpeak**-like messaging application, built as a team project at Epitech.
+A network server handles multiple simultaneous clients that can join teams, chat in
+channels, open discussion threads and exchange private messages, in real time.
 
-## ✨ Fonctionnalités
+## ✨ Features
 
-- 🔐 Authentification des utilisateurs (login / logout, UUID unique)
-- 👥 Équipes, canaux et fils de discussion (threads)
-- 💬 Messages de canal et **messages privés** en temps réel
-- 🔔 Système d'abonnement aux équipes (subscribe / unsubscribe)
-- 📡 Serveur gérant **plusieurs clients simultanés** (sockets, multiplexage)
-- 📄 Protocole de communication **documenté dans une RFC** ([`RFC/rfc-teams-protocol.txt`](RFC/rfc-teams-protocol.txt))
+- 🔐 User authentication (login / logout, unique UUID)
+- 👥 Teams, channels and discussion threads
+- 💬 Channel messages and **private messages** in real time
+- 🔔 Team subscription system (subscribe / unsubscribe)
+- 📡 Server handling **multiple simultaneous clients** (sockets, multiplexing)
+- 📄 Communication protocol **documented in an RFC** ([`RFC/rfc-teams-protocol.txt`](RFC/rfc-teams-protocol.txt))
 
-## 🛠️ Stack technique
+## 🛠️ Tech stack
 
-- **Langage** : C++
-- **Réseau** : sockets, multiplexage (I/O non bloquantes)
-- **Architecture** : client / serveur, orientée objet
-- **Build** : Makefile
+- **Language**: C++
+- **Networking**: sockets, multiplexing (non-blocking I/O)
+- **Architecture**: client / server, object-oriented
+- **Build**: Makefile
 
-## 🚀 Compilation & lancement
+## 🚀 Build & run
 
 ```bash
-make                      # compile le serveur et le client
+make                      # build the server and the client
 
-./myteams_server <port>   # démarre le serveur
-./myteams_cli <ip> <port> # lance un client
+./myteams_server <port>   # start the server
+./myteams_cli <ip> <port> # launch a client
 ```
 
-Quelques commandes côté client : `/login`, `/users`, `/send`, `/messages`,
+Some client commands: `/login`, `/users`, `/send`, `/messages`,
 `/create`, `/subscribe`, `/use`, `/info`, `/help`.
 
-## 🧠 Ce que ce projet m'a apporté
+## 🧠 What I learned
 
-Concevoir une véritable architecture réseau en C++ (POO, gestion de connexions
-concurrentes) et surtout l'importance de **spécifier un protocole clairement (RFC)**
-avant même d'écrire une ligne de code.
+Designing a real network architecture in C++ (OOP, handling concurrent connections)
+and, above all, the importance of **clearly specifying a protocol (RFC)** before
+writing a single line of code.
 
 ---
 
-*Projet réalisé dans le cadre du cursus Epitech (module NWP-400).*
+*Project built as part of the Epitech curriculum (NWP-400 module).*
