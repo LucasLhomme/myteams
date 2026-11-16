@@ -1,5 +1,10 @@
 # myTeams — Client/Server messaging app in C++
 
+[![School: Epitech](https://img.shields.io/badge/School-Epitech-005696.svg)](https://www.epitech.eu/)
+[![Academic Year: 2025-2026](https://img.shields.io/badge/Academic%20Year-2025--2026%20(Tek2)-blueviolet.svg)](#)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+
+
 A **Slack / TeamSpeak**-like messaging application, built as a team project at Epitech.
 A network server handles multiple simultaneous clients that can join teams, chat in
 channels, open discussion threads and exchange private messages, in real time.
